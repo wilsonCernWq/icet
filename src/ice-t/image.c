@@ -495,7 +495,7 @@ IceTVoid *icetImageGetColorVoid(IceTImage image, IceTSizeType *pixel_size)
     return (IceTVoid *)const_buffer;
 }
 
-const IceTUByte *icetImageGetColorcub(IceTImage image)
+const IceTUByte *icetImageGetColorcub(const IceTImage image)
 {
     IceTEnum color_format = icetImageGetColorFormat(image);
 
@@ -515,7 +515,7 @@ IceTUByte *icetImageGetColorub(IceTImage image)
        non-const image. */
     return (IceTUByte *)const_buffer;
 }
-const IceTUInt *icetImageGetColorcui(IceTImage image)
+const IceTUInt *icetImageGetColorcui(const IceTImage image)
 {
     return (const IceTUInt *)icetImageGetColorcub(image);
 }
@@ -1090,7 +1090,7 @@ void icetClearSparseImage(IceTSparseImage image)
         p -= 0xFFFF;
     }
 
-    INACTIVE_RUN_LENGTH(data) = p;
+    INACTIVE_RUN_LENGTH(data) = (IceTUShort)p;
     ACTIVE_RUN_LENGTH(data) = 0;
 }
 
