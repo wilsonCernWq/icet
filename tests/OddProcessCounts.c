@@ -97,9 +97,7 @@ static int OddProcessCountsTryCollectOptions(void)
         for (magic_k = 2; magic_k <= num_proc; magic_k *= 2) {
             IceTInt max_image_split;
 
-            if (rank == 0) {
-                printf("      Using magic k value of %d\n", magic_k);
-            }
+            printstat("      Using magic k value of %d\n", magic_k);
             icetStateSetInteger(ICET_MAGIC_K, magic_k);
 
             for (max_image_split = 0;
@@ -107,10 +105,8 @@ static int OddProcessCountsTryCollectOptions(void)
                  max_image_split += magic_k) {
                 IceTInt result;
 
-                if (rank == 0) {
-                    printf("        Using image split of %d\n",
-                           max_image_split);
-                }
+                printstat("        Using image split of %d\n",
+                          max_image_split);
                 icetStateSetInteger(ICET_MAX_IMAGE_SPLIT, max_image_split);
 
                 result = OddProcessCountsTryFrame();
@@ -144,10 +140,8 @@ static int OddProcessCountsTryStrategy(void)
             single_image_strategy_list[single_image_strategy_index];
 
         icetSingleImageStrategy(single_image_strategy);
-        if (rank == 0) {
-            printf("    Using %s single image sub-strategy.\n",
-                   icetGetSingleImageStrategyName());
-        }
+        printstat("    Using %s single image sub-strategy.\n",
+                  icetGetSingleImageStrategyName());
 
         result = OddProcessCountsTryCollectOptions();
 
@@ -180,9 +174,7 @@ static int OddProcessCountsTryCount(void)
         IceTInt num_proc = mid_proc + add_proc;
         IceTInt result;
 
-        if (rank == 0) {
-            printf("  Using %d processes\n", num_proc);
-        }
+        printstat("  Using %d processes\n", num_proc);
 
         if ((max_proc - rank) <= num_proc) {
             /* In visible range. */

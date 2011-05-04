@@ -97,30 +97,30 @@ static float g_color[4];
 
 static void usage(char *argv[])
 {
-    printf("\nUSAGE: %s [testargs]\n", argv[0]);
-    printf("\nWhere  testargs are:\n");
-    printf("  -tilesx <num> Sets the number of tiles horizontal (default 1).\n");
-    printf("  -tilesy <num> Sets the number of tiles vertical (default 1).\n");
-    printf("  -frames       Sets the number of frames to render (default 2).\n");
-    printf("  -seed <num>   Use the given number as the random seed.\n");
-    printf("  -transparent  Render transparent images.  (Uses 4 floats for colors.)\n");
-    printf("  -colored-background Use a color for the background and correct as necessary.\n");
-    printf("  -no-interlace Turn off the image interlacing optimization.\n");
-    printf("  -no-collect   Turn off image collection.\n");
-    printf("  -sync-render  Synchronize rendering by adding a barrier to the draw callback.\n");
-    printf("  -write-image  Write an image on the first frame.\n");
-    printf("  -reduce       Use the reduce strategy (default).\n");
-    printf("  -vtree        Use the virtual trees strategy.\n");
-    printf("  -sequential   Use the sequential strategy.\n");
-    printf("  -bswap        Use the binary-swap single-image strategy.\n");
-    printf("  -radixk       Use the radix-k single-image strategy.\n");
-    printf("  -tree         Use the tree single-image strategy.\n");
-    printf("  -magic-k-study <num> Use the radix-k single-image strategy and repeat for\n"
+    printstat("\nUSAGE: %s [testargs]\n", argv[0]);
+    printstat("\nWhere  testargs are:\n");
+    printstat("  -tilesx <num> Sets the number of tiles horizontal (default 1).\n");
+    printstat("  -tilesy <num> Sets the number of tiles vertical (default 1).\n");
+    printstat("  -frames       Sets the number of frames to render (default 2).\n");
+    printstat("  -seed <num>   Use the given number as the random seed.\n");
+    printstat("  -transparent  Render transparent images.  (Uses 4 floats for colors.)\n");
+    printstat("  -colored-background Use a color for the background and correct as necessary.\n");
+    printstat("  -no-interlace Turn off the image interlacing optimization.\n");
+    printstat("  -no-collect   Turn off image collection.\n");
+    printstat("  -sync-render  Synchronize rendering by adding a barrier to the draw callback.\n");
+    printstat("  -write-image  Write an image on the first frame.\n");
+    printstat("  -reduce       Use the reduce strategy (default).\n");
+    printstat("  -vtree        Use the virtual trees strategy.\n");
+    printstat("  -sequential   Use the sequential strategy.\n");
+    printstat("  -bswap        Use the binary-swap single-image strategy.\n");
+    printstat("  -radixk       Use the radix-k single-image strategy.\n");
+    printstat("  -tree         Use the tree single-image strategy.\n");
+    printstat("  -magic-k-study <num> Use the radix-k single-image strategy and repeat for\n"
            "                multiple values of k, up to <num>, doubling each time.\n");
-    printf("  -max-image-split-study <num> Repeat the test for multiple maximum image\n"
+    printstat("  -max-image-split-study <num> Repeat the test for multiple maximum image\n"
            "                splits starting at <num> and doubling each time.\n");
-    printf("  -h, -help      Print this help message.\n");
-    printf("\nFor general testing options, try -h or -help before test name.\n");
+    printstat("  -h, -help      Print this help message.\n");
+    printstat("\nFor general testing options, try -h or -help before test name.\n");
 }
 
 static void parse_arguments(int argc, char *argv[])
@@ -196,7 +196,7 @@ static void parse_arguments(int argc, char *argv[])
             usage(argv);
             exit(0);
         } else {
-            printf("Unknown option `%s'.\n", argv[arg]);
+            printstat("Unknown option `%s'.\n", argv[arg]);
             usage(argv);
             exit(1);
         }
@@ -317,7 +317,7 @@ static void draw(const IceTDouble *projection_matrix,
     success = icetMatrixInverseTranspose((const IceTDouble *)transform,
                                          inverse_transpose_transform);
     if (!success) {
-        printf("ERROR: Inverse failed.\n");
+        printrank("ERROR: Inverse failed.\n");
     }
 
     for (planeIdx = 0; planeIdx < NUM_HEX_PLANES; planeIdx++) {
@@ -690,7 +690,7 @@ static int SimpleTimingDoRender()
             }
         }
     } else {
-        printf("Not enough processes to %dx%d tiles.\n",
+        printstat("Not enough processes to %dx%d tiles.\n",
                g_num_tiles_x, g_num_tiles_y);
         return TEST_FAILED;
     }
@@ -717,7 +717,7 @@ static int SimpleTimingDoRender()
     /* Initialize randomness. */
     if (rank == 0) {
         int i;
-        printf("Seed = %d\n", g_seed);
+        printstat("Seed = %d\n", g_seed);
         for (i = 1; i < num_proc; i++) {
             icetCommSend(&g_seed, 1, ICET_INT, i, 33);
         }

@@ -68,7 +68,7 @@ static void checkOglError(void)
     GLenum error = glGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printf("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
       CASE_ERROR(GL_NO_ERROR);
@@ -82,7 +82,7 @@ static void checkOglError(void)
       CASE_ERROR(GL_TABLE_TOO_LARGE);
 #endif
       default:
-          printf("## UNKNOWN OPENGL ERROR CODE!!!!!!\n");
+          printrank("## UNKNOWN OPENGL ERROR CODE!!!!!!\n");
           break;
     }
 
@@ -95,7 +95,7 @@ static void checkIceTError(void)
     IceTEnum error = icetGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printf("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
       CASE_ERROR(ICET_NO_ERROR);
@@ -106,7 +106,7 @@ static void checkIceTError(void)
       CASE_ERROR(ICET_INVALID_OPERATION);
       CASE_ERROR(ICET_INVALID_VALUE);
       default:
-          printf("## UNKNOWN ICET ERROR CODE!!!!!\n");
+          printrank("## UNKNOWN ICET ERROR CODE!!!!!\n");
           break;
     }
 
@@ -130,6 +130,35 @@ static void realprintf(const char *fmt, ...)
 }
 #endif
 
+void printstat(const char *fmt, ...)
+{
+    va_list ap;
+    IceTInt rank;
+
+    icetGetIntegerv(ICET_RANK, &rank);
+
+    if ((rank == 0) || (realstdout == NULL)) {
+        va_start(ap, fmt);
+        vprintf(fmt, ap);
+        va_end(ap);
+        fflush(stdout);
+    }
+}
+
+void printrank(const char *fmt, ...)
+{
+    va_list ap;
+    IceTInt rank;
+
+    icetGetIntegerv(ICET_RANK, &rank);
+
+    printf("%d> ", rank);
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    fflush(stdout);
+}
+
 static IceTContext context;
 
 static void usage(char **argv)
@@ -140,8 +169,8 @@ static void usage(char **argv)
     printf("  -height <n> Height of window (default n=768).\n");
     printf("  -display <display>\n");
     printf("              X server each node contacts.  Default display=localhost:0\n");
-    printf("  -nologdebug Do not add debugging statements.  Provides less information, but\n");
-    printf("              makes identifying errors and warnings easier.\n");
+    printf("  -logdebug   Add debugging statements.  Provides more information, but\n");
+    printf("              makes identifying errors, warnings, and statuses harder\n");
     printf("  -redirect   Redirect standard output to log.????, where ???? is the rank\n");
     printf("  --          Parse no more arguments.\n");
     printf("  -h, -help   This help message.\n");
@@ -154,7 +183,7 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
     char **argv = *argvp;
     int width = 1024;
     int height = 768;
-    IceTBitField diag_level = ICET_DIAG_FULL;
+    IceTBitField diag_level = ICET_DIAG_ALL_NODES | ICET_DIAG_WARNINGS;
     int redirect = 0;
     int rank, num_proc;
 
@@ -180,8 +209,8 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
             width = atoi(argv[++arg]);
         } else if (strcmp(argv[arg], "-height") == 0) {
             height = atoi(argv[++arg]);
-        } else if (strcmp(argv[arg], "-nologdebug") == 0) {
-            diag_level &= ICET_DIAG_WARNINGS | ICET_DIAG_ALL_NODES;
+        } else if (strcmp(argv[arg], "-logdebug") == 0) {
+            diag_level &= ICET_DIAG_FULL;
         } else if (strcmp(argv[arg], "-redirect") == 0) {
             redirect = 1;
         } else if (   (strcmp(argv[arg], "-h") == 0)
@@ -283,7 +312,7 @@ IceTBoolean strategy_uses_single_image_strategy(IceTEnum strategy)
       case ICET_STRATEGY_REDUCE:        return ICET_TRUE;
       case ICET_STRATEGY_VTREE:         return ICET_FALSE;
       default:
-          printf("ERROR: unknown strategy type.");
+          printrank("ERROR: unknown strategy type.");
           return ICET_TRUE;
     }
 }

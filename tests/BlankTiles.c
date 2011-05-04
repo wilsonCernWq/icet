@@ -17,7 +17,7 @@
 
 static void draw(void)
 {
-    printf("In draw\n");
+    /* printrank("In draw\n"); */
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     glBegin(GL_QUADS);
@@ -26,7 +26,7 @@ static void draw(void)
       glVertex3d(0.5, 0.5, 0.0);
       glVertex3d(-0.5, 0.5, 0.0);
     glEnd();
-    printf("Leaving draw\n");
+    /* printrank("Leaving draw\n"); */
 }
 
 static int BlankTilesDoTest(void)
@@ -43,7 +43,7 @@ static int BlankTilesDoTest(void)
         IceTSizeType my_width = -1;
         IceTSizeType my_height = -1;
         IceTImage image;
-        printf("\nRunning on a %d x %d display.\n", tile_dim, tile_dim);
+        printstat("\nRunning on a %d x %d display.\n", tile_dim, tile_dim);
         icetResetTiles();
         for (y = 0; y < tile_dim; y++) {
             for (x = 0; x < tile_dim; x++) {
@@ -63,7 +63,7 @@ static int BlankTilesDoTest(void)
             }
         }
 
-        printf("Rendering frame.\n");
+        printstat("Rendering frame.\n");
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glOrtho(-1, tile_dim*2-1, -1, tile_dim*2-1, -1, 1);
@@ -73,28 +73,28 @@ static int BlankTilesDoTest(void)
         swap_buffers();
 
         if (rank == 0) {
-            printf("Rank == 0, tile should have stuff in it.\n");
+            /* printrank("Rank == 0, tile should have stuff in it.\n"); */
         } else if (rank < tile_dim*tile_dim) {
             IceTUByte *cb;
             int pixel;
 
             if (   (my_width != icetImageGetWidth(image))
                 || (my_height != icetImageGetHeight(image)) ) {
-                printf("Image size is wrong!!!!!!!!!\n");
+                printrank("Image size is wrong!!!!!!!!!\n");
                 result = TEST_FAILED;
             }
 
-            printf("Checking returned image data.\n");
+            /* printrank("Checking returned image data.\n"); */
             cb = icetImageGetColorub(image);
             for (pixel = 0; pixel < my_width*my_height*4; pixel++) {
                 if (cb[pixel] != 0) {
-                    printf("Found bad pixel!!!!!!!!\n");
+                    printrank("Found bad pixel!!!!!!!!\n");
                     result = TEST_FAILED;
                     break;
                 }
             }
         } else {
-            printf("Not a display node.  Not testing image.\n");
+            /* printrank("Not a display node.  Not testing image.\n"); */
         }
     }
 
@@ -121,7 +121,7 @@ static int BlankTilesRun()
         int num_single_image_strategy;
 
         icetStrategy(strategy);
-        printf("\n\nUsing %s strategy.\n", icetGetStrategyName());
+        printstat("\n\nUsing %s strategy.\n", icetGetStrategyName());
 
         if (strategy_uses_single_image_strategy(strategy)) {
             num_single_image_strategy = SINGLE_IMAGE_STRATEGY_LIST_SIZE;
@@ -138,8 +138,8 @@ static int BlankTilesRun()
             int test_result;
 
             icetSingleImageStrategy(single_image_strategy);
-            printf("Using %s single image sub-strategy.\n",
-                   icetGetSingleImageStrategyName());
+            printstat("Using %s single image sub-strategy.\n",
+                      icetGetSingleImageStrategyName());
 
             test_result = BlankTilesDoTest();
             if (test_result != TEST_PASSED) {

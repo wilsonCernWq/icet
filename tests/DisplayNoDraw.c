@@ -28,9 +28,9 @@ static int global_result;
 
 static void draw(void)
 {
-    printf("In draw\n");
+    /* printrank("In draw\n"); */
     if (global_rank == 0) {
-        printf("ERROR: Draw called on rank 0!\n");
+        printrank("ERROR: Draw called on rank 0!\n");
         global_result = TEST_FAILED;
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -42,12 +42,12 @@ static void draw(void)
           glVertex3d(-1.0, 1.0, 0.0);
         glEnd();
     }
-    printf("Leaving draw\n");
+    /* printrank("Leaving draw\n"); */
 }
 
 static void DisplayNoDrawInit(void)
 {
-    printf("Setting tile.");
+    printstat("Setting tile.");
     icetResetTiles();
     icetAddTile(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 
@@ -81,7 +81,7 @@ static void DisplayNoDrawDoTest(void)
         IceTImage image;
         IceTUByte *color_buffer;
 
-        printf("Blank image is rank %d\n", global_iteration);
+        printstat("Blank image is rank %d\n", global_iteration);
 
         image = icetGLDrawFrame();
         swap_buffers();
@@ -94,13 +94,13 @@ static void DisplayNoDrawDoTest(void)
             && ((global_num_proc > 2) || (global_iteration != 1)) ) {
             int p;
             int bad_count = 0;
-            printf("Checking pixels.\n");
+            printstat("Checking pixels.\n");
             color_buffer = icetImageGetColorub(image);
             for (p = 0;
                  (p < SCREEN_WIDTH*SCREEN_HEIGHT*4) && (bad_count < 10); p++) {
                 if (color_buffer[p] != 255) {
-                    printf("BAD PIXEL %d.%d\n", p/4, p%4);
-                    printf("    Expected 255, got %d\n", color_buffer[p]);
+                    printrank("BAD PIXEL %d.%d\n", p/4, p%4);
+                    printrank("    Expected 255, got %d\n", color_buffer[p]);
                     bad_count++;
                 }
             }
@@ -124,7 +124,7 @@ static int DisplayNoDrawRun(void)
     icetGetIntegerv(ICET_RANK, &global_rank);
     icetGetIntegerv(ICET_NUM_PROCESSES, &global_num_proc);
 
-    printf("Starting DisplayNoDraw.\n");
+    printstat("Starting DisplayNoDraw.\n");
 
     global_result = TEST_PASSED;
 
@@ -137,7 +137,7 @@ static int DisplayNoDrawRun(void)
         int num_single_image_strategy;
 
         icetStrategy(strategy);
-        printf("\n\nUsing %s strategy.\n", icetGetStrategyName());
+        printstat("\n\nUsing %s strategy.\n", icetGetStrategyName());
 
         if (strategy_uses_single_image_strategy(strategy)) {
             num_single_image_strategy = SINGLE_IMAGE_STRATEGY_LIST_SIZE;
@@ -153,8 +153,8 @@ static int DisplayNoDrawRun(void)
                 = single_image_strategy_list[single_image_strategy_index];
 
             icetSingleImageStrategy(single_image_strategy);
-            printf("Using %s single image sub-strategy.\n",
-                   icetGetSingleImageStrategyName());
+            printstat("Using %s single image sub-strategy.\n",
+                      icetGetSingleImageStrategyName());
 
             DisplayNoDrawDoTest();
         }

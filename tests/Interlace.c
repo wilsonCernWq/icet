@@ -73,7 +73,7 @@ static void LowerTriangleImage(IceTImage image)
     } else if (icetImageGetColorFormat(image) == ICET_IMAGE_COLOR_NONE) {
         /* Do nothing. */
     } else {
-        printf("ERROR: Encountered unknown color format.");
+        printrank("ERROR: Encountered unknown color format.");
     }
 
     if (icetImageGetDepthFormat(image) == ICET_IMAGE_DEPTH_FLOAT) {
@@ -91,7 +91,7 @@ static void LowerTriangleImage(IceTImage image)
     } else if (icetImageGetDepthFormat(image) == ICET_IMAGE_DEPTH_NONE) {
         /* Do nothing. */
     } else {
-        printf("ERROR: Encountered unknown depth format.");
+        printrank("ERROR: Encountered unknown depth format.");
     }
 }
 
@@ -124,7 +124,7 @@ static void FullImage(IceTImage image)
     } else if (icetImageGetColorFormat(image) == ICET_IMAGE_COLOR_NONE) {
         /* Do nothing. */
     } else {
-        printf("ERROR: Encountered unknown color format.");
+        printrank("ERROR: Encountered unknown color format.");
     }
 
     if (icetImageGetDepthFormat(image) == ICET_IMAGE_DEPTH_FLOAT) {
@@ -138,7 +138,7 @@ static void FullImage(IceTImage image)
     } else if (icetImageGetDepthFormat(image) == ICET_IMAGE_DEPTH_NONE) {
         /* Do nothing. */
     } else {
-        printf("ERROR: Encountered unknown depth format.");
+        printrank("ERROR: Encountered unknown depth format.");
     }
 }
 
@@ -155,13 +155,13 @@ static IceTBoolean CompareImageColors(const IceTImage image_a,
     IceTSizeType y;
 
     if (icetImageGetColorFormat(image_a) != icetImageGetColorFormat(image_b)) {
-        printf("ERROR: Image formats do not match.\n");
+        printrank("ERROR: Image formats do not match.\n");
         return ICET_FALSE;
     }
 
     if (   (icetImageGetWidth(image_a) != icetImageGetWidth(image_b))
         || (icetImageGetHeight(image_a) != icetImageGetHeight(image_b)) ) {
-        printf("ERROR: Images have different dimensions.\n");
+        printrank("ERROR: Images have different dimensions.\n");
         return ICET_FALSE;
     }
 
@@ -185,11 +185,11 @@ static IceTBoolean CompareImageColors(const IceTImage image_a,
                 || (data_a[1] != data_b[1])
                 || (data_a[2] != data_b[2])
                 || (data_a[3] != data_b[3]) ) {
-                printf("ERROR: Encountered bad pixel @ (%d,%d).\n", x, y);
-                printf("Expected (%d, %d, %d, %d)\n",
-                       data_a[0], data_a[1], data_a[2], data_a[3]);
-                printf("Got (%d, %d, %d, %d)\n",
-                       data_b[0], data_b[1], data_b[2], data_b[3]);
+                printrank("ERROR: Encountered bad pixel @ (%d,%d).\n", x, y);
+                printrank("Expected (%d, %d, %d, %d)\n",
+                          data_a[0], data_a[1], data_a[2], data_a[3]);
+                printrank("Got (%d, %d, %d, %d)\n",
+                          data_b[0], data_b[1], data_b[2], data_b[3]);
                 return ICET_FALSE;
             }
             data_a += 4;
@@ -216,13 +216,13 @@ static IceTBoolean CompareImageDepths(const IceTImage image_a,
     IceTSizeType y;
 
     if (icetImageGetDepthFormat(image_a) != icetImageGetDepthFormat(image_b)) {
-        printf("ERROR: Image formats do not match.\n");
+        printrank("ERROR: Image formats do not match.\n");
         return ICET_FALSE;
     }
 
     if (   (icetImageGetWidth(image_a) != icetImageGetWidth(image_b))
         || (icetImageGetHeight(image_a) != icetImageGetHeight(image_b)) ) {
-        printf("ERROR: Images have different dimensions.\n");
+        printrank("ERROR: Images have different dimensions.\n");
         return ICET_FALSE;
     }
 
@@ -243,8 +243,8 @@ static IceTBoolean CompareImageDepths(const IceTImage image_a,
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
             if (data_a[0] != data_b[0]) {
-                printf("ERROR: Encountered bad pixel @ (%d,%d).\n", x, y);
-                printf("Expected %f, got %f\n", data_a[0], data_b[0]);
+                printrank("ERROR: Encountered bad pixel @ (%d,%d).\n", x, y);
+                printrank("Expected %f, got %f\n", data_a[0], data_b[0]);
                 return ICET_FALSE;
             }
             data_a++;
@@ -307,13 +307,13 @@ static int TestInterlaceSplit(const IceTImage image)
 
     icetCompressImage(image, original_sparse);
 
-    printf("Interlacing image for %d pieces\n", NUM_PARTITIONS);
+    printstat("Interlacing image for %d pieces\n", NUM_PARTITIONS);
     icetSparseImageInterlace(original_sparse,
                              NUM_PARTITIONS,
                              ICET_SI_STRATEGY_BUFFER_0,
                              interlaced_sparse);
 
-    printf("Splitting image %d times\n", NUM_PARTITIONS);
+    printstat("Splitting image %d times\n", NUM_PARTITIONS);
     icetSparseImageSplit(interlaced_sparse,
                          0,
                          NUM_PARTITIONS,
@@ -321,7 +321,7 @@ static int TestInterlaceSplit(const IceTImage image)
                          sparse_partition,
                          offsets);
 
-    printf("Reconstructing image.\n");
+    printstat("Reconstructing image.\n");
     for (partition = 0; partition < NUM_PARTITIONS; partition++) {
         IceTSizeType real_offset = icetGetInterlaceOffset(partition,
                                                           NUM_PARTITIONS,
@@ -353,13 +353,13 @@ static int InterlaceRunFormat()
     imagebuffer = malloc(icetImageBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT));
     image = icetImageAssignBuffer(imagebuffer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    printf("\n********* Creating lower triangle image\n");
+    printstat("\n********* Creating lower triangle image\n");
     LowerTriangleImage(image);
 
     result = TestInterlaceSplit(image);
     if (result != TEST_PASSED) { return result; }
 
-    printf("\n********* Creating full image\n");
+    printstat("\n********* Creating full image\n");
     FullImage(image);
 
     result = TestInterlaceSplit(image);

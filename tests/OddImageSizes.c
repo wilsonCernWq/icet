@@ -118,14 +118,14 @@ static int OddImageSizesRun(void)
         width = c_image_sizes[image_size_index][0];
         height = c_image_sizes[image_size_index][1];
 
-        printf("\n\nUsing image size %dx%d\n", (int)width, (int)height);
+        printstat("\n\nUsing image size %dx%d\n", (int)width, (int)height);
 
         for (tile_dimensions = 1;
              tile_dimensions*tile_dimensions <= num_proc;
              tile_dimensions++) {
             int strategy_index;
 
-            printf("Using tile dimensions %d\n", tile_dimensions);
+            printstat("  Using tile dimensions %d\n", tile_dimensions);
 
             setup_tiles(tile_dimensions, width, height);
 
@@ -137,7 +137,7 @@ static int OddImageSizesRun(void)
                 int num_single_image_strategy;
 
                 icetStrategy(strategy);
-                printf("Using %s strategy\n", icetGetStrategyName());
+                printstat("    Using %s strategy\n", icetGetStrategyName());
 
                 if (strategy_uses_single_image_strategy(strategy)) {
                     num_single_image_strategy = SINGLE_IMAGE_STRATEGY_LIST_SIZE;
@@ -153,8 +153,8 @@ static int OddImageSizesRun(void)
                         single_image_strategy_list[single_image_strategy_index];
 
                     icetSingleImageStrategy(single_image_strategy);
-                    printf("Using %s single image sub-strategy.\n",
-                           icetGetSingleImageStrategyName());
+                    printstat("      Using %s single image sub-strategy.\n",
+                              icetGetSingleImageStrategyName());
 
                     /* Just invoke a frame.  I'm more worried about crashing
                        than other incorrect behavior. */

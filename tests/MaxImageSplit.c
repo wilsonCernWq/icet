@@ -184,10 +184,10 @@ static int MaxImageSplitCheckImage(const IceTImage image)
             for (y = 0; y < PROC_REGION_HEIGHT; y++) {
                 for (x = 0; x < PROC_REGION_WIDTH; x++) {
                     if (*pixel != proc) {
-                        printf("**** Found bad pixel!!!! ****\n");
-                        printf("Region for process %d, x = %d, y = %d\n",
-                               proc, x, y);
-                        printf("Reported %d\n", *pixel);
+                        printrank("**** Found bad pixel!!!! ****\n");
+                        printrank("Region for process %d, x = %d, y = %d\n",
+                                  proc, x, y);
+                        printrank("Reported %d\n", *pixel);
                         return TEST_FAILED;
                     }
                     pixel++;
@@ -227,8 +227,8 @@ static int MaxImageSplitTryStrategy()
          si_strategy_idx < SINGLE_IMAGE_STRATEGY_LIST_SIZE;
          si_strategy_idx++) {
         icetSingleImageStrategy(single_image_strategy_list[si_strategy_idx]);
-        printf("  Trying single image strategy %s\n",
-               icetGetSingleImageStrategyName());
+        printstat("  Trying single image strategy %s\n",
+                  icetGetSingleImageStrategyName());
         result += MaxImageSplitTryRender();
     }
 
@@ -250,7 +250,7 @@ static int MaxImageSplitTryMax()
         char image_split_string[32];
         IceTInt reported_image_split;
 
-        printf("Trying max image split of %d\n", max_image_split);
+        printstat("Trying max image split of %d\n", max_image_split);
 
         sprintf(image_split_string, "%d", max_image_split);
         setenv("ICET_MAX_IMAGE_SPLIT", image_split_string, ICET_TRUE);
@@ -266,7 +266,7 @@ static int MaxImageSplitTryMax()
 
         icetGetIntegerv(ICET_MAX_IMAGE_SPLIT, &reported_image_split);
         if (max_image_split != reported_image_split) {
-            printf("**** Max image split not set correctly!!!! ****\n");
+            printrank("**** Max image split not set correctly!!!! ****\n");
             return TEST_FAILED;
         }
 

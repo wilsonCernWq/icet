@@ -93,9 +93,9 @@ static int CompareSparseImages(const IceTSparseImage image0,
 
     if (   icetSparseImageGetCompressedBufferSize(image0)
         != icetSparseImageGetCompressedBufferSize(image1) ) {
-        printf("Buffer sizes do not match: %d vs %d!\n",
-               icetSparseImageGetCompressedBufferSize(image0),
-               icetSparseImageGetCompressedBufferSize(image1));
+        printrank("Buffer sizes do not match: %d vs %d!\n",
+                  icetSparseImageGetCompressedBufferSize(image0),
+                  icetSparseImageGetCompressedBufferSize(image1));
         return TEST_FAILED;
     }
 
@@ -114,8 +114,8 @@ static int CompareSparseImages(const IceTSparseImage image0,
 
     for (i = 0; i < width*height; i++) {
         if (color_buffer[0][i] != color_buffer[1][i]) {
-            printf("Buffer mismatch at uint %d\n", i);
-            printf("0x%x vs 0x%x\n", color_buffer[0][i], color_buffer[1][i]);
+            printrank("Buffer mismatch at uint %d\n", i);
+            printrank("0x%x vs 0x%x\n", color_buffer[0][i], color_buffer[1][i]);
             return TEST_FAILED;
         }
     }
@@ -140,7 +140,7 @@ static int TrySparseImageCopyPixels(const IceTImage image,
 
     int result;
 
-    printf("Trying sparse image copy from %d to %d\n", start, end);
+    printstat("Trying sparse image copy from %d to %d\n", start, end);
 
     full_sparse_buffer = malloc(icetSparseImageBufferSize(width, height));
     full_sparse = icetSparseImageAssignBuffer(full_sparse_buffer,width,height);
@@ -176,7 +176,7 @@ static int TestSparseImageCopyPixels(const IceTImage image)
     int start, end;
 
     if (height <= 20) {
-        printf("Need image height greater than 20.\n");
+        printstat("Need image height greater than 20.\n");
         return TEST_NOT_RUN;
     }
 
@@ -245,7 +245,7 @@ static int TestSparseImageSplit(const IceTImage image)
 
     icetCompressImage(image, full_sparse);
 
-    printf("Spliting image %d times\n", NUM_PARTITIONS);
+    printstat("Spliting image %d times\n", NUM_PARTITIONS);
     icetSparseImageSplit(full_sparse,
                          0,
                          NUM_PARTITIONS,
@@ -259,14 +259,14 @@ static int TestSparseImageSplit(const IceTImage image)
                              icetSparseImageGetNumPixels(
                                                    sparse_partition[partition]),
                              compare_sparse);
-        printf("    Comparing partition %d\n", partition);
+        printstat("    Comparing partition %d\n", partition);
         result = CompareSparseImages(compare_sparse,
                                      sparse_partition[partition]);
         if (result != TEST_PASSED) return result;
     }
 
-    printf("Spliting image %d times with first partition in place.\n",
-           NUM_PARTITIONS);
+    printstat("Spliting image %d times with first partition in place.\n",
+              NUM_PARTITIONS);
     sparse_partition[0] = full_sparse;
     icetSparseImageSplit(full_sparse,
                          0,
@@ -281,7 +281,7 @@ static int TestSparseImageSplit(const IceTImage image)
                              icetSparseImageGetNumPixels(
                                                    sparse_partition[partition]),
                              compare_sparse);
-        printf("    Comparing partition %d\n", partition);
+        printstat("    Comparing partition %d\n", partition);
         result = CompareSparseImages(compare_sparse,
                                      sparse_partition[partition]);
         if (result != TEST_PASSED) return result;
@@ -309,7 +309,7 @@ static int SparseImageCopyRun()
     imagebuffer = malloc(icetImageBufferSize(SCREEN_WIDTH, SCREEN_HEIGHT));
     image = icetImageAssignBuffer(imagebuffer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    printf("\n********* Creating lower triangle image\n");
+    printstat("\n********* Creating lower triangle image\n");
     LowerTriangleImage(image);
 
     if (TestSparseImageCopyPixels(image) != TEST_PASSED) {
@@ -319,7 +319,7 @@ static int SparseImageCopyRun()
         return TEST_FAILED;
     }
 
-    printf("\n********* Creating upper triangle image\n");
+    printstat("\n********* Creating upper triangle image\n");
     UpperTriangleImage(image);
 
     if (TestSparseImageCopyPixels(image) != TEST_PASSED) {
