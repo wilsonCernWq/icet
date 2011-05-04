@@ -34,6 +34,13 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm);
 
 int run_test(int (*test_function)(void));
 
+/* Used like printf but prints status only on process 0 or to independent
+   logs. */
+void printstat(const char *fmt, ...);
+
+/* Like printf but adds the rank of the local process. */
+void printrank(const char *fmt, ...);
+
 #ifdef ICET_TESTS_USE_OPENGL
 void swap_buffers(void);
 #endif

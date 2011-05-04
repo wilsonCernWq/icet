@@ -33,9 +33,9 @@ static void PrintMatrix(float *mat)
 
     for (c = 0; c < 4; c++) {
         for (r = 0; r < 4; r++) {
-            printf("%f ", mat[4*r + c]);
+            printstat("%f ", mat[4*r + c]);
         }
-        printf("\n");
+        printstat("\n");
     }
 }
 
@@ -75,10 +75,10 @@ static int BoundsBehindViewerRun()
     glLoadIdentity();
     glFrustum(-1.0, 1.0, -1.0, 1.0, 1.0, 2.0);
 
-    printf("Modelview matrix:\n");
+    printstat("Modelview matrix:\n");
     glGetFloatv(GL_MODELVIEW_MATRIX, mat);
     PrintMatrix(mat);
-    printf("Projection matrix:\n");
+    printstat("Projection matrix:\n");
     glGetFloatv(GL_PROJECTION_MATRIX, mat);
     PrintMatrix(mat);
 
@@ -96,7 +96,7 @@ static int BoundsBehindViewerRun()
     if (rank == 0) {
         IceTUInt *cb = icetImageGetColorui(image);
         if (cb[0] != 0xFFFFFFFF) {
-            printf("First pixel in color buffer wrong: 0x%x\n", cb[0]);
+            printstat("First pixel in color buffer wrong: 0x%x\n", cb[0]);
             return TEST_FAILED;
         }
     }

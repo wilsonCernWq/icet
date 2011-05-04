@@ -30,7 +30,7 @@ static IceTImage g_refimage_transparent;
 
 static void draw(void)
 {
-    printf("In draw\n");
+    printstat("In draw\n");
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBegin(GL_QUADS);
       glVertex3d(-1.0, -1.0, 0.0);
@@ -38,7 +38,7 @@ static void draw(void)
       glVertex3d(1.0, 1.0, 0.0);
       glVertex3d(-1.0, 1.0, 0.0);
     glEnd();
-    printf("Leaving draw\n");
+    printstat("Leaving draw\n");
 }
 
 #define DIFF(x, y)      ((x) < (y) ? (y) - (x) : (x) - (y))
@@ -55,17 +55,17 @@ static int compare_color_buffers(IceTSizeType local_width,
     IceTUByte *refcbuf, *cb;
     IceTInt rank;
 
-    printf("Checking returned image.\n");
+    printstat("Checking returned image.\n");
 
     icetGetIntegerv(ICET_RANK, &rank);
 
     if (    (local_width != icetImageGetWidth(testimage))
          || (local_height != icetImageGetHeight(testimage)) ) {
-        printf("Image dimensions not what is expected!!!!!\n");
-        printf("Expected %dx%d, received %dx%d\n",
-               (int)local_width, (int)local_height,
-               (int)icetImageGetWidth(testimage),
-               (int)icetImageGetHeight(testimage));
+        printrank("Image dimensions not what is expected!!!!!\n");
+        printrank("Expected %dx%d, received %dx%d\n",
+                  (int)local_width, (int)local_height,
+                  (int)icetImageGetWidth(testimage),
+                  (int)icetImageGetHeight(testimage));
         return 0;
     }
 
@@ -117,7 +117,7 @@ static int compare_color_buffers(IceTSizeType local_width,
         && (bad_pixel_count > local_height) )
     {
       /* Too many errors.  Call it bad. */
-        printf("Too many bad pixels!!!!!!\n");
+        printrank("Too many bad pixels!!!!!!\n");
       /* Write current images. */
         sprintf(filename, "ref%03d.ppm", rank);
         write_ppm(filename, refcbuf, (int)SCREEN_WIDTH, (int)SCREEN_HEIGHT);
@@ -179,7 +179,7 @@ static int compare_depth_buffers(IceTSizeType local_width,
     IceTFloat *db;
     IceTInt rank;
 
-    printf("Checking returned image.\n");
+    printstat("Checking returned image.\n");
 
     icetGetIntegerv(ICET_RANK, &rank);
 
@@ -212,7 +212,7 @@ static int compare_depth_buffers(IceTSizeType local_width,
         IceTUByte *errbuf;
 
       /* Too many errors.  Call it bad. */
-        printf("Too many bad pixels!!!!!!\n");
+        printrank("Too many bad pixels!!!!!!\n");
 
         errbuf = malloc(4*local_width*local_height);
 
@@ -284,7 +284,7 @@ static void RandomTransformDoRender(IceTBoolean transparent,
 
     icetGetIntegerv(ICET_RANK, &rank);
 
-    printf("Rendering frame.\n");
+    printstat("Rendering frame.\n");
     if (transparent) {
         glColor4f(0.5f*g_color[0], 0.5f*g_color[1], 0.5f*g_color[2], 0.5f);
     } else {
@@ -323,7 +323,7 @@ static void RandomTransformDoRender(IceTBoolean transparent,
             }
         }
     } else {
-        printf("Not a display node.  Not testing image.\n");
+        printrank("Not a display node.  Not testing image.\n");
     }
     check_results(result);
 }
@@ -332,11 +332,11 @@ static void RandomTransformTryInterlace(IceTBoolean transparent,
                                         IceTSizeType local_width,
                                         IceTSizeType local_height)
 {
-    printf("\nTurning image interlace on.\n");
+    printstat("\nTurning image interlace on.\n");
     icetEnable(ICET_INTERLACE_IMAGES);
     RandomTransformDoRender(transparent, local_width, local_height);
 
-    printf("\nTurning image interlace off.\n");
+    printstat("\nTurning image interlace off.\n");
     icetDisable(ICET_INTERLACE_IMAGES);
     RandomTransformDoRender(transparent, local_width, local_height);
 }
@@ -354,7 +354,7 @@ static void RandomTransformTryStrategy()
 
     icetGetBooleanv(ICET_STRATEGY_SUPPORTS_ORDERING, &test_ordering);
 
-    printf("\nRunning on a %d x %d display.\n", g_tile_dim, g_tile_dim);
+    printstat("\nRunning on a %d x %d display.\n", g_tile_dim, g_tile_dim);
     icetResetTiles();
     for (y = 0; y < g_tile_dim; y++) {
         for (x = 0; x < g_tile_dim; x++) {
@@ -383,7 +383,7 @@ static void RandomTransformTryStrategy()
                (GLsizei)viewport_width, (GLsizei)viewport_height);
     /* glViewport(0, 0, local_width, local_height); */
 
-    printf("\nDoing color buffer.\n");
+    printstat("\nDoing color buffer.\n");
     icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
     icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
     icetCompositeMode(ICET_COMPOSITE_MODE_Z_BUFFER);
@@ -392,7 +392,7 @@ static void RandomTransformTryStrategy()
 
     RandomTransformTryInterlace(ICET_FALSE, local_width, local_height);
 
-    printf("\nDoing float color buffer.\n");
+    printstat("\nDoing float color buffer.\n");
     icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_FLOAT);
     icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
     icetCompositeMode(ICET_COMPOSITE_MODE_Z_BUFFER);
@@ -401,7 +401,7 @@ static void RandomTransformTryStrategy()
 
     RandomTransformTryInterlace(ICET_FALSE, local_width, local_height);
 
-    printf("\nDoing depth buffer.\n");
+    printstat("\nDoing depth buffer.\n");
     icetSetColorFormat(ICET_IMAGE_COLOR_NONE);
     icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
     icetCompositeMode(ICET_COMPOSITE_MODE_Z_BUFFER);
@@ -410,7 +410,7 @@ static void RandomTransformTryStrategy()
     RandomTransformTryInterlace(ICET_FALSE, local_width, local_height);
 
     if (test_ordering) {
-        printf("\nDoing blended color buffer.\n");
+        printstat("\nDoing blended color buffer.\n");
         icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
         icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
         icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
@@ -418,7 +418,7 @@ static void RandomTransformTryStrategy()
 
         RandomTransformTryInterlace(ICET_TRUE, local_width, local_height);
 
-        printf("\nDoing blended float color buffer.\n");
+        printstat("\nDoing blended float color buffer.\n");
         icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_FLOAT);
         icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
         icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
@@ -426,7 +426,7 @@ static void RandomTransformTryStrategy()
 
         RandomTransformTryInterlace(ICET_TRUE, local_width, local_height);
     } else {
-        printf("\nStrategy does not support ordering, skipping.\n");
+        printstat("\nStrategy does not support ordering, skipping.\n");
     }
 }
 
@@ -452,25 +452,25 @@ static int RandomTransformRun()
     image_order = malloc(num_proc * sizeof(IceTInt));
     if (rank == 0) {
         seed = (int)time(NULL);
-        printf("Base seed = %u\n", seed);
+        printstat("Base seed = %u\n", seed);
         srand(seed);
         for (i = 0; i < num_proc; i++) image_order[i] = i;
-        printf("Image order:\n");
+        printstat("Image order:\n");
         for (i = 0; i < num_proc; i++) {
             int swap_idx = rand()%(num_proc-i) + i;
             int swap = image_order[swap_idx];
             image_order[swap_idx] = image_order[i];
             image_order[i] = swap;
-            printf("%4d", image_order[i]);
+            printstat("%4d", image_order[i]);
         }
-        printf("\n");
+        printstat("\n");
         if (rand()%2) {
           /* No data replication. */
             rep_group_size = 1;
         } else {
             rep_group_size = rand()%num_proc + 1;
         }
-        printf("Data replication group sizes: %d\n", rep_group_size);
+        printstat("Data replication group sizes: %d\n", rep_group_size);
         for (i = 1; i < num_proc; i++) {
             icetCommSend(&seed, 1, ICET_INT, i, 29);
             icetCommSend(image_order, num_proc, ICET_INT, i, 30);
@@ -528,7 +528,7 @@ static int RandomTransformRun()
   /* Pick a color based on my index into the object ordering. */
     for (i = 0; image_order[i] != rank; i++);
     i /= rep_group_size;
-    printf("My data replication group: %d\n", i);
+    printstat("My data replication group: %d\n", i);
     icetDataReplicationGroupColor(i);
     if ((i&0x07) == 0) {
         g_color[0] = 0.5f;  g_color[1] = 0.5f;  g_color[2] = 0.5f;
@@ -548,15 +548,15 @@ static int RandomTransformRun()
         icetCommRecv(g_modelview, 16, ICET_FLOAT, rep_group[0], 40);
     }
 
-    printf("Transformation:\n");
-    printf("    %f %f %f %f\n",
-           g_modelview[0], g_modelview[4], g_modelview[8], g_modelview[12]);
-    printf("    %f %f %f %f\n",
-           g_modelview[1], g_modelview[5], g_modelview[9], g_modelview[13]);
-    printf("    %f %f %f %f\n",
-           g_modelview[2], g_modelview[6], g_modelview[10], g_modelview[14]);
-    printf("    %f %f %f %f\n",
-           g_modelview[3], g_modelview[7], g_modelview[11], g_modelview[15]);
+    printstat("Transformation:\n");
+    printstat("    %f %f %f %f\n",
+              g_modelview[0], g_modelview[4], g_modelview[8], g_modelview[12]);
+    printstat("    %f %f %f %f\n",
+              g_modelview[1], g_modelview[5], g_modelview[9], g_modelview[13]);
+    printstat("    %f %f %f %f\n",
+              g_modelview[2], g_modelview[6], g_modelview[10], g_modelview[14]);
+    printstat("    %f %f %f %f\n",
+              g_modelview[3], g_modelview[7], g_modelview[11], g_modelview[15]);
 
   /* Let everyone get a base image for comparison. */
     glViewport(0, 0, (GLsizei)SCREEN_WIDTH, (GLsizei)SCREEN_HEIGHT);
@@ -566,7 +566,7 @@ static int RandomTransformRun()
         icetAddTile(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, i);
     }
 
-    printf("\nGetting base images for z compare.\n");
+    printstat("\nGetting base images for z compare.\n");
     icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
     icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
     icetCompositeMode(ICET_COMPOSITE_MODE_Z_BUFFER);
@@ -587,7 +587,7 @@ static int RandomTransformRun()
                         0,
                         icetImageGetNumPixels(image));
 
-    printf("Getting base image for color blend.\n");
+    printstat("Getting base image for color blend.\n");
     icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
     icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
     icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
@@ -615,7 +615,7 @@ static int RandomTransformRun()
         int num_single_image_strategy;
 
         icetStrategy(strategy);
-        printf("\n\nUsing %s strategy.\n", icetGetStrategyName());
+        printstat("\n\nUsing %s strategy.\n", icetGetStrategyName());
 
         if (strategy_uses_single_image_strategy(strategy)) {
             num_single_image_strategy = SINGLE_IMAGE_STRATEGY_LIST_SIZE;
@@ -631,7 +631,7 @@ static int RandomTransformRun()
                 = single_image_strategy_list[si_strategy_idx];
 
             icetSingleImageStrategy(single_image_strategy);
-            printf("\nUsing %s single image sub-strategy.\n",
+            printstat("\nUsing %s single image sub-strategy.\n",
                    icetGetSingleImageStrategyName());
 
             for (g_tile_dim = 1;
@@ -642,7 +642,7 @@ static int RandomTransformRun()
         }
     }
 
-    printf("Cleaning up.\n");
+    printstat("Cleaning up.\n");
     free(image_order);
     free(refbuf);
     free(refbuf2);

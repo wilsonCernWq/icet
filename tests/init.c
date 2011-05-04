@@ -68,7 +68,7 @@ static void checkOglError(void)
     GLenum error = glGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printf("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
       CASE_ERROR(GL_NO_ERROR);
@@ -82,7 +82,7 @@ static void checkOglError(void)
       CASE_ERROR(GL_TABLE_TOO_LARGE);
 #endif
       default:
-          printf("## UNKNOWN OPENGL ERROR CODE!!!!!!\n");
+          printrank("## UNKNOWN OPENGL ERROR CODE!!!!!!\n");
           break;
     }
 
@@ -95,7 +95,7 @@ static void checkIceTError(void)
     IceTEnum error = icetGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printf("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
       CASE_ERROR(ICET_NO_ERROR);
@@ -106,7 +106,7 @@ static void checkIceTError(void)
       CASE_ERROR(ICET_INVALID_OPERATION);
       CASE_ERROR(ICET_INVALID_VALUE);
       default:
-          printf("## UNKNOWN ICET ERROR CODE!!!!!\n");
+          printrank("## UNKNOWN ICET ERROR CODE!!!!!\n");
           break;
     }
 
@@ -129,6 +129,35 @@ static void realprintf(const char *fmt, ...)
     }
 }
 #endif
+
+void printstat(const char *fmt, ...)
+{
+    va_list ap;
+    IceTInt rank;
+
+    icetGetIntegerv(ICET_RANK, &rank);
+
+    if ((rank == 0) || (realstdout == NULL)) {
+        va_start(ap, fmt);
+        vprintf(fmt, ap);
+        va_end(ap);
+        fflush(stdout);
+    }
+}
+
+void printrank(const char *fmt, ...)
+{
+    va_list ap;
+    IceTInt rank;
+
+    icetGetIntegerv(ICET_RANK, &rank);
+
+    printf("%d> ", rank);
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    fflush(stdout);
+}
 
 static IceTContext context;
 
@@ -283,7 +312,7 @@ IceTBoolean strategy_uses_single_image_strategy(IceTEnum strategy)
       case ICET_STRATEGY_REDUCE:        return ICET_TRUE;
       case ICET_STRATEGY_VTREE:         return ICET_FALSE;
       default:
-          printf("ERROR: unknown strategy type.");
+          printrank("ERROR: unknown strategy type.");
           return ICET_TRUE;
     }
 }
