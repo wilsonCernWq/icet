@@ -169,8 +169,8 @@ static void usage(char **argv)
     printf("  -height <n> Height of window (default n=768).\n");
     printf("  -display <display>\n");
     printf("              X server each node contacts.  Default display=localhost:0\n");
-    printf("  -nologdebug Do not add debugging statements.  Provides less information, but\n");
-    printf("              makes identifying errors and warnings easier.\n");
+    printf("  -logdebug   Add debugging statements.  Provides more information, but\n");
+    printf("              makes identifying errors, warnings, and statuses harder\n");
     printf("  -redirect   Redirect standard output to log.????, where ???? is the rank\n");
     printf("  --          Parse no more arguments.\n");
     printf("  -h, -help   This help message.\n");
@@ -183,7 +183,7 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
     char **argv = *argvp;
     int width = 1024;
     int height = 768;
-    IceTBitField diag_level = ICET_DIAG_FULL;
+    IceTBitField diag_level = ICET_DIAG_ALL_NODES | ICET_DIAG_WARNINGS;
     int redirect = 0;
     int rank, num_proc;
 
@@ -209,8 +209,8 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
             width = atoi(argv[++arg]);
         } else if (strcmp(argv[arg], "-height") == 0) {
             height = atoi(argv[++arg]);
-        } else if (strcmp(argv[arg], "-nologdebug") == 0) {
-            diag_level &= ICET_DIAG_WARNINGS | ICET_DIAG_ALL_NODES;
+        } else if (strcmp(argv[arg], "-logdebug") == 0) {
+            diag_level &= ICET_DIAG_FULL;
         } else if (strcmp(argv[arg], "-redirect") == 0) {
             redirect = 1;
         } else if (   (strcmp(argv[arg], "-h") == 0)
