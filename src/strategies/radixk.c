@@ -687,6 +687,12 @@ static IceTBoolean radixkTryCompositeIncoming(radixkPartnerInfo *partners,
                                           partners[back_index].receiveImage,
                                           spare_image);
         radixkSwapImages(&partners[front_index].receiveImage, &spare_image);
+        if (icetSparseImageEqual(spare_image, final_image)) {
+            /* Special case, front image was sharing buffer with final.
+               Use back image for next spare. */
+            spare_image = partners[back_index].receiveImage;
+            partners[back_index].receiveImage = icetSparseImageNull();
+        }
         partners[front_index].compositeLevel++;
         to_composite_index = front_index;
     }
