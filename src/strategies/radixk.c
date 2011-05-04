@@ -687,6 +687,12 @@ static IceTBoolean radixkTryCompositeIncoming(radixkPartnerInfo *partners,
                                           partners[back_index].receiveImage,
                                           spare_image);
         radixkSwapImages(&partners[front_index].receiveImage, &spare_image);
+        if (icetSparseImageEqual(spare_image, final_image)) {
+            /* Special case, front image was sharing buffer with final.
+               Use back image for next spare. */
+            spare_image = partners[back_index].receiveImage;
+            partners[back_index].receiveImage = icetSparseImageNull();
+        }
         partners[front_index].compositeLevel++;
         to_composite_index = front_index;
     }
@@ -720,8 +726,8 @@ static void radixkCompositeIncomingImages(radixkPartnerInfo *partners,
 
     /* We will be reusing buffers like crazy, but we'll need at least one more
        for the first composite, assuming we have at least two composites. */
-    width = icetSparseImageGetWidth(me->sendImage);
-    height = icetSparseImageGetHeight(me->sendImage);
+    width = icetSparseImageGetWidth(me->receiveImage);
+    height = icetSparseImageGetHeight(me->receiveImage);
     if (total_composites >= 2) {
         spare_image = icetGetStateBufferSparseImage(RADIXK_SPARE_BUFFER,
                                                     width,
@@ -730,15 +736,18 @@ static void radixkCompositeIncomingImages(radixkPartnerInfo *partners,
         spare_image = icetSparseImageNull();
     }
 
-    /* Grumble.  Stupid special case where there is only one composite and
-       we want the result to go in the same image as my send image (which can
+    /* Grumble.  Stupid special case where there is only one composite and we
+       want the result to go in the same image as my receive image (which can
        happen when not splitting). */
-    if (icetSparseImageEqual(me->sendImage,image) && (total_composites < 2)) {
+    if (icetSparseImageEqual(me->receiveImage,image) && (total_composites < 2)){
         spare_image = icetGetStateBufferSparseImage(RADIXK_SPARE_BUFFER,
                                                     width,
                                                     height);
-        icetSparseImageCopyPixels(me->sendImage, 0, width*height, spare_image);
-        me->sendImage = spare_image;
+        icetSparseImageCopyPixels(me->receiveImage,
+                                  0,
+                                  width*height,
+                                  spare_image);
+        me->receiveImage = spare_image;
     }
 
     /* Start by trying to composite the implicit receive from myself.  It won't
