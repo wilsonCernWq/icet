@@ -94,6 +94,11 @@ struct IceTCommunicatorStruct {
                       int sendcount,
                       IceTEnum datatype,
                       void *recvbuf);
+    void (*Alltoall)(struct IceTCommunicatorStruct *self,
+                     const void *sendbuf,
+                     int sendcount,
+                     IceTEnum datatype,
+                     void *recvbuf);
 
     IceTCommRequest (*Isend)(struct IceTCommunicatorStruct *self,
                              const void *buf,

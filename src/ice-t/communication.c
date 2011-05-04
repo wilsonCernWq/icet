@@ -158,6 +158,17 @@ void icetCommAllgather(const void *sendbuf,
     comm->Allgather(comm, sendbuf, (int)sendcount, datatype, recvbuf);
 }
 
+void icetCommAlltoall(const void *sendbuf,
+                      IceTSizeType sendcount,
+                      IceTEnum datatype,
+                      void *recvbuf)
+{
+    IceTCommunicator comm = icetGetCommunicator();
+    icetCommCheckCount(sendcount);
+    icetAddSent(sendcount, datatype);
+    comm->Alltoall(comm, sendbuf, (int)sendcount, datatype, recvbuf);
+}
+
 IceTCommRequest icetCommIsend(const void *buf,
                               IceTSizeType count,
                               IceTEnum datatype,

@@ -66,6 +66,11 @@ static void Allgather(IceTCommunicator self,
                       int sendcount,
                       IceTEnum datatype,
                       void *recvbuf);
+static void Alltoall(IceTCommunicator self,
+                     const void *sendbuf,
+                     int sendcount,
+                     IceTEnum datatype,
+                     void *recvbuf);
 static IceTCommRequest Isend(IceTCommunicator self,
                              const void *buf,
                              int count,
@@ -196,6 +201,7 @@ IceTCommunicator icetCreateMPICommunicator(MPI_Comm mpi_comm)
     comm->Gather = Gather;
     comm->Gatherv = Gatherv;
     comm->Allgather = Allgather;
+    comm->Alltoall = Alltoall;
     comm->Isend = Isend;
     comm->Irecv = Irecv;
     comm->Wait = Waitone;
@@ -363,6 +369,20 @@ static void Allgather(IceTCommunicator self,
     MPI_Allgather((void *)sendbuf, sendcount, mpitype,
                   recvbuf, sendcount, mpitype,
                   MPI_COMM);
+}
+
+static void Alltoall(IceTCommunicator self,
+                     const void *sendbuf,
+                     int sendcount,
+                     IceTEnum datatype,
+                     void *recvbuf)
+{
+    MPI_Datatype mpitype;
+    CONVERT_DATATYPE(datatype, mpitype);
+
+    MPI_Alltoall((void *)sendbuf, sendcount, mpitype,
+                 recvbuf, sendcount, mpitype,
+                 MPI_COMM);
 }
 
 static IceTCommRequest Isend(IceTCommunicator self,
