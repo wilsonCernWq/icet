@@ -28,7 +28,7 @@ static int global_result;
 
 static void draw(void)
 {
-    printrank("In draw\n");
+    /* printrank("In draw\n"); */
     if (global_rank == 0) {
         printrank("ERROR: Draw called on rank 0!\n");
         global_result = TEST_FAILED;
@@ -42,7 +42,7 @@ static void draw(void)
           glVertex3d(-1.0, 1.0, 0.0);
         glEnd();
     }
-    printrank("Leaving draw\n");
+    /* printrank("Leaving draw\n"); */
 }
 
 static void DisplayNoDrawInit(void)
@@ -94,7 +94,7 @@ static void DisplayNoDrawDoTest(void)
             && ((global_num_proc > 2) || (global_iteration != 1)) ) {
             int p;
             int bad_count = 0;
-            printrank("Checking pixels.\n");
+            printstat("Checking pixels.\n");
             color_buffer = icetImageGetColorub(image);
             for (p = 0;
                  (p < SCREEN_WIDTH*SCREEN_HEIGHT*4) && (bad_count < 10); p++) {

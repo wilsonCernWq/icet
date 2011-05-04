@@ -30,7 +30,7 @@ static IceTImage g_refimage_transparent;
 
 static void draw(void)
 {
-    printstat("In draw\n");
+    /* printstat("In draw\n"); */
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBegin(GL_QUADS);
       glVertex3d(-1.0, -1.0, 0.0);
@@ -38,7 +38,7 @@ static void draw(void)
       glVertex3d(1.0, 1.0, 0.0);
       glVertex3d(-1.0, 1.0, 0.0);
     glEnd();
-    printstat("Leaving draw\n");
+    /* printstat("Leaving draw\n"); */
 }
 
 #define DIFF(x, y)      ((x) < (y) ? (y) - (x) : (x) - (y))
@@ -323,7 +323,7 @@ static void RandomTransformDoRender(IceTBoolean transparent,
             }
         }
     } else {
-        printrank("Not a display node.  Not testing image.\n");
+        /* printrank("Not a display node.  Not testing image.\n"); */
     }
     check_results(result);
 }

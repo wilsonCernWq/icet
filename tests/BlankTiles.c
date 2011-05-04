@@ -17,7 +17,7 @@
 
 static void draw(void)
 {
-    printstat("In draw\n");
+    /* printrank("In draw\n"); */
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     glBegin(GL_QUADS);
@@ -26,7 +26,7 @@ static void draw(void)
       glVertex3d(0.5, 0.5, 0.0);
       glVertex3d(-0.5, 0.5, 0.0);
     glEnd();
-    printstat("Leaving draw\n");
+    /* printrank("Leaving draw\n"); */
 }
 
 static int BlankTilesDoTest(void)
@@ -73,7 +73,7 @@ static int BlankTilesDoTest(void)
         swap_buffers();
 
         if (rank == 0) {
-            printrank("Rank == 0, tile should have stuff in it.\n");
+            /* printrank("Rank == 0, tile should have stuff in it.\n"); */
         } else if (rank < tile_dim*tile_dim) {
             IceTUByte *cb;
             int pixel;
@@ -84,7 +84,7 @@ static int BlankTilesDoTest(void)
                 result = TEST_FAILED;
             }
 
-            printrank("Checking returned image data.\n");
+            /* printrank("Checking returned image data.\n"); */
             cb = icetImageGetColorub(image);
             for (pixel = 0; pixel < my_width*my_height*4; pixel++) {
                 if (cb[pixel] != 0) {
@@ -94,7 +94,7 @@ static int BlankTilesDoTest(void)
                 }
             }
         } else {
-            printrank("Not a display node.  Not testing image.\n");
+            /* printrank("Not a display node.  Not testing image.\n"); */
         }
     }
 
