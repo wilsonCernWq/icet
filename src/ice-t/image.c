@@ -2169,6 +2169,14 @@ void icetCompressedCompressedComposite(const IceTSparseImage front_buffer,
                                        const IceTSparseImage back_buffer,
                                        IceTSparseImage dest_buffer)
 {
+    if (   icetSparseImageEqual(front_buffer, back_buffer)
+        || icetSparseImageEqual(front_buffer, dest_buffer)
+        || icetSparseImageEqual(back_buffer, dest_buffer) ) {
+        icetRaiseError("Detected reused buffer in"
+                       " compressed-compressed composite.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
+
     icetTimingBlendBegin();
 
 #define FRONT_SPARSE_IMAGE front_buffer
