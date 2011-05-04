@@ -20,27 +20,23 @@ void icetAutomaticCompose(const IceTInt *compose_group,
                           IceTSparseImage *result_image,
                           IceTSizeType *piece_offset)
 {
-    if (group_size >= 8) {
-	icetRaiseDebug("Doing bswap compose");
-        icetInvokeSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_BSWAP,
+    if (group_size > 1) {
+        icetRaiseDebug("Doing radix-k compose");
+        icetInvokeSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_RADIXK,
                                       compose_group,
                                       group_size,
                                       image_dest,
                                       input_image,
                                       result_image,
                                       piece_offset);
-    } else if (group_size > 0) {
-	icetRaiseDebug("Doing tree compose");
-        icetInvokeSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_TREE,
-                                      compose_group,
-                                      group_size,
-                                      image_dest,
-                                      input_image,
-                                      result_image,
-                                      piece_offset);
+    } else if (group_size == 1) {
+        icetRaiseDebug("Shallow copy input.");
+        *result_image = input_image;
+        *piece_offset = 0;
     } else {
 	icetRaiseDebug("Clearing pixels");
         icetClearSparseImage(input_image);
         *result_image = input_image;
+        *piece_offset = 0;
     }
 }
