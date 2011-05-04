@@ -19,6 +19,7 @@ ENDIF (NOT ICET_TESTS_USE_OPENGL)
 SET(MyTests
   CompressionSize.c
   Interlace.c
+  MaxImageSplit.c
   OddImageSizes.c
   OddProcessCounts.c
   RadixkUnitTests.c

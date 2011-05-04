@@ -96,3 +96,7 @@ other processes have no pixel data.  Strategies taking advantage of turning
 off ICET_COLLECT_IMAGES should set this.
 
 ICET_MAX_IMAGE_SPLIT environment variable, cmake variable, state variable
+
+All the matrix math helpers icetMatrix* in IceTDevMatrix.h
+
+Const versions of icetImageGetColor* and icetImageGetDepth* functions.
