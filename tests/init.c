@@ -210,7 +210,7 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
         } else if (strcmp(argv[arg], "-height") == 0) {
             height = atoi(argv[++arg]);
         } else if (strcmp(argv[arg], "-logdebug") == 0) {
-            diag_level &= ICET_DIAG_FULL;
+            diag_level = ICET_DIAG_FULL;
         } else if (strcmp(argv[arg], "-redirect") == 0) {
             redirect = 1;
         } else if (   (strcmp(argv[arg], "-h") == 0)
