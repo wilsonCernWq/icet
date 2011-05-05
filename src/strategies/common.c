@@ -219,206 +219,363 @@ void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
     free(imageDestinations);
 }
 
-static void startLargeRecv(void *buf, IceTSizeType size, IceTInt src,
-                           IceTCommRequest *req) {
-    *req = icetCommIrecv(buf, size, ICET_BYTE, src, LARGE_MESSAGE);
+#define ICET_SEND_RECV_LARGE_SEND_IDS_BUF       ICET_STRATEGY_COMMON_BUF_0
+#define ICET_SEND_RECV_LARGE_DEST_MASK_BUF      ICET_STRATEGY_COMMON_BUF_1
+#define ICET_SEND_RECV_LARGE_SRC_MASK_BUF       ICET_STRATEGY_COMMON_BUF_2
+
+enum IceTIterState {
+    ICET_SEND_RECV_LARGE_ITER_FORWARD = 0x1101,
+    ICET_SEND_RECV_LARGE_ITER_BACKWARD,
+    ICET_SEND_RECV_LARGE_ITER_DONE
+};
+
+static void icetSendRecvLargeBuildMessageMasks(
+                                             IceTInt numMessagesSending,
+                                             const IceTInt *messageDestinations,
+                                             IceTInt **sendIds_p,
+                                             IceTBoolean **myDestMask_p,
+                                             IceTBoolean **mySrcMask_p)
+{
+    IceTInt comm_size;
+
+    IceTInt *sendIds;
+    IceTBoolean *myDestMask;
+    IceTBoolean *mySrcMask;
+
+    icetGetIntegerv(ICET_NUM_PROCESSES, &comm_size);
+
+    sendIds = icetGetStateBuffer(ICET_SEND_RECV_LARGE_SEND_IDS_BUF,
+                                 comm_size * sizeof(IceTInt));
+    myDestMask = icetGetStateBuffer(ICET_SEND_RECV_LARGE_DEST_MASK_BUF,
+                                    comm_size * sizeof(IceTBoolean));
+    mySrcMask = icetGetStateBuffer(ICET_SEND_RECV_LARGE_SRC_MASK_BUF,
+                                   comm_size * sizeof(IceTBoolean));
+
+    /* Convert array of ranks to a mask of ranks. */ {
+        IceTInt message_id;
+        memset(myDestMask, 0, comm_size * sizeof(IceTBoolean));
+        for (message_id = 0; message_id < numMessagesSending; message_id++) {
+            myDestMask[messageDestinations[message_id]] = ICET_TRUE;
+            sendIds[messageDestinations[message_id]] = message_id;
+        }
+    }
+
+    /* Transpose myDestMask array to get mask of srcs on each process. */
+    icetCommAlltoall(myDestMask, 1, ICET_BOOLEAN, mySrcMask);
+
+    *sendIds_p = sendIds;
+    *myDestMask_p = myDestMask;
+    *mySrcMask_p = mySrcMask;
 }
-static void startLargeSend(IceTInt dest, IceTCommRequest *req,
-                           IceTGenerateData callback, IceTInt *sendIds) {
-    IceTSizeType data_size;
-    IceTVoid *data;
-    data = (*callback)(sendIds[dest], dest, &data_size);
-    *req = icetCommIsend(data, data_size, ICET_BYTE, dest, LARGE_MESSAGE);
+
+static void icetSendRecvLargePostReceive(const IceTBoolean *mySrcMask,
+                                         IceTBoolean messagesInOrder,
+                                         IceTInt order_rank,
+                                         IceTVoid *incomingBuffer,
+                                         IceTSizeType bufferSize,
+                                         IceTInt *recv_order_idx_p,
+                                         enum IceTIterState *recv_iter_state_p,
+                                         IceTCommRequest *recv_request_p)
+{
+    IceTInt comm_size;
+    const IceTInt *composite_order;
+    IceTInt src_rank;
+
+    /* If we are still waiting for a receive to finish, do nothing. */
+    if (*recv_request_p != ICET_COMM_REQUEST_NULL) return;
+
+    /* If we are done receiving all messages, do nothing. */
+    if (*recv_iter_state_p == ICET_SEND_RECV_LARGE_ITER_DONE) return;
+
+    if (messagesInOrder) {
+        composite_order = icetUnsafeStateGetInteger(ICET_COMPOSITE_ORDER);
+    } else {
+        composite_order = NULL;
+    }
+
+    icetGetIntegerv(ICET_NUM_PROCESSES, &comm_size);
+
+    while (*recv_iter_state_p == ICET_SEND_RECV_LARGE_ITER_BACKWARD) {
+        (*recv_order_idx_p)--;
+        if (*recv_order_idx_p < 0) {
+            if (messagesInOrder) {
+                /* If receiving messages in order, start iterating down from
+                   self. */
+                *recv_iter_state_p = ICET_SEND_RECV_LARGE_ITER_FORWARD;
+                *recv_order_idx_p = order_rank;
+                break;
+            } else {
+                /* If receiving messages in arbitrary order, continue iteration
+                   from bottom. */
+                *recv_order_idx_p = comm_size - 1;
+            }
+        }
+        if (*recv_order_idx_p == order_rank) {
+            if (messagesInOrder) {
+                icetRaiseError("Somehow flipped rank in ordered messages.",
+                               ICET_SANITY_CHECK_FAIL);
+            }
+            *recv_iter_state_p = ICET_SEND_RECV_LARGE_ITER_DONE;
+            break;
+        }
+        /* Check to see if we have this message to send. */
+        if (messagesInOrder) {
+            src_rank = composite_order[*recv_order_idx_p];
+        } else {
+            src_rank = *recv_order_idx_p;
+        }
+        if (mySrcMask[src_rank]) break;
+    }
+
+    while (*recv_iter_state_p == ICET_SEND_RECV_LARGE_ITER_FORWARD) {
+        (*recv_order_idx_p)++;
+        if (*recv_order_idx_p >= comm_size) {
+            if (!messagesInOrder) {
+                icetRaiseError("Reversed iteration in unordered messages.",
+                               ICET_SANITY_CHECK_FAIL);
+            }
+            /* We have iterated over everything at this point. */
+            *recv_iter_state_p = ICET_SEND_RECV_LARGE_ITER_DONE;
+            break;
+        }
+        /* Check to see if we have this message to send. */
+        /* If we are here, messages are in order. */
+        src_rank = composite_order[*recv_order_idx_p];
+        if (mySrcMask[src_rank]) break;
+    }
+
+    /* If we have not finished, then we must be ready to send a message. */
+    if (*recv_iter_state_p != ICET_SEND_RECV_LARGE_ITER_DONE) {
+        *recv_request_p = icetCommIrecv(incomingBuffer,
+                                        bufferSize,
+                                        ICET_BYTE,
+                                        src_rank,
+                                        LARGE_MESSAGE);
+    }
 }
-void icetSendRecvLargeMessages(IceTInt numMessagesSending,
-                               IceTInt *messageDestinations,
-                               IceTBoolean messagesInOrder,
-                               IceTGenerateData generateDataFunc,
-                               IceTHandleData handleDataFunc,
-                               IceTVoid *incomingBuffer,
-                               IceTSizeType bufferSize)
+
+static void icetSendRecvLargePostSend(const IceTInt *sendIds,
+                                      const IceTBoolean *myDestMask,
+                                      IceTBoolean messagesInOrder,
+                                      IceTGenerateData generateDataFunc,
+                                      IceTInt order_rank,
+                                      IceTInt *send_order_idx_p,
+                                      enum IceTIterState *send_iter_state_p,
+                                      IceTCommRequest *send_request_p)
+{
+    IceTInt comm_size;
+    const IceTInt *composite_order;
+    IceTInt dest_rank;
+
+    /* If we are still waiting for a send to finish, do nothing. */
+    if (*send_request_p != ICET_COMM_REQUEST_NULL) return;
+
+    /* If we are done sending all messages, do nothing. */
+    if (*send_iter_state_p == ICET_SEND_RECV_LARGE_ITER_DONE) return;
+
+    if (messagesInOrder) {
+        composite_order = icetUnsafeStateGetInteger(ICET_COMPOSITE_ORDER);
+    } else {
+        composite_order = NULL;
+    }
+
+    icetGetIntegerv(ICET_NUM_PROCESSES, &comm_size);
+
+    while (*send_iter_state_p == ICET_SEND_RECV_LARGE_ITER_FORWARD) {
+        (*send_order_idx_p)++;
+        if (*send_order_idx_p >= comm_size) {
+            if (messagesInOrder) {
+                /* If receiving messages in order, start iterating up from
+                   self. */
+                *send_iter_state_p = ICET_SEND_RECV_LARGE_ITER_BACKWARD;
+                *send_order_idx_p = order_rank;
+                break;
+            } else {
+                /* If receiving messages in arbitrary order, continue iteration
+                   from top. */
+                *send_order_idx_p = 0;
+            }
+        }
+        if (*send_order_idx_p == order_rank) {
+            if (messagesInOrder) {
+                icetRaiseError("Somehow flipped rank in ordered messages.",
+                               ICET_SANITY_CHECK_FAIL);
+            }
+            *send_iter_state_p = ICET_SEND_RECV_LARGE_ITER_DONE;
+            break;
+        }
+        /* Check to see if we have this message to send. */
+        if (messagesInOrder) {
+            dest_rank = composite_order[*send_order_idx_p];
+        } else {
+            dest_rank = *send_order_idx_p;
+        }
+        if (myDestMask[dest_rank]) break;
+    }
+
+    while (*send_iter_state_p == ICET_SEND_RECV_LARGE_ITER_BACKWARD) {
+        (*send_order_idx_p)--;
+        if (*send_order_idx_p < 0) {
+            if (!messagesInOrder) {
+                icetRaiseError("Reversed iteration in unordered messages.",
+                               ICET_SANITY_CHECK_FAIL);
+            }
+            /* We have iterated over everything at this point. */
+            *send_iter_state_p = ICET_SEND_RECV_LARGE_ITER_DONE;
+            break;
+        }
+        /* Check to see if we have this message to send. */
+        /* If we are here, messages are in order. */
+        dest_rank = composite_order[*send_order_idx_p];
+        if (myDestMask[dest_rank]) break;
+    }
+
+    /* If we have not finished, then we must be ready to send a message. */
+    if (*send_iter_state_p != ICET_SEND_RECV_LARGE_ITER_DONE) {
+        IceTSizeType data_size;
+        IceTVoid *data;
+        data = (*generateDataFunc)(sendIds[dest_rank], dest_rank, &data_size);
+        *send_request_p = icetCommIsend(data,
+                                        data_size,
+                                        ICET_BYTE,
+                                        dest_rank,
+                                        LARGE_MESSAGE);
+    }
+}
+
+static void icetDoSendRecvLarge(const IceTInt *sendIds,
+                                const IceTBoolean *myDestMask,
+                                const IceTBoolean *mySrcMask,
+                                IceTBoolean messagesInOrder,
+                                IceTGenerateData generateDataFunc,
+                                IceTHandleData handleDataFunc,
+                                IceTVoid *incomingBuffer,
+                                IceTSizeType bufferSize)
 {
     IceTInt comm_size;
     IceTInt rank;
-    IceTInt i;
-    IceTInt sender;
-    IceTInt numSend, numRecv;
-    IceTInt someoneSends;
-    IceTInt sendToSelf;
-    IceTInt sqi, rqi;     /* Send/Recv queue index. */
     const IceTInt *composite_order;
     const IceTInt *process_orders;
 
-    IceTInt *sendIds;
-    IceTByte *myDests;
-    IceTByte *allDests;
-    IceTInt *sendQueue;
-    IceTInt *recvQueue;
-    IceTInt *recvFrom;
+    IceTInt order_rank;
+    IceTInt recv_order_idx;
+    IceTInt send_order_idx;
 
-#define RECV_IDX 0
-#define SEND_IDX 1
+    enum IceTCommIndices { RECV_IDX = 0, SEND_IDX = 1 };
     IceTCommRequest requests[2];
+
+    enum IceTIterState recv_iter_state;
+    enum IceTIterState send_iter_state;
 
     icetGetIntegerv(ICET_NUM_PROCESSES, &comm_size);
     icetGetIntegerv(ICET_RANK, &rank);
 
-    composite_order = icetUnsafeStateGetInteger(ICET_COMPOSITE_ORDER);
-    process_orders = icetUnsafeStateGetInteger(ICET_PROCESS_ORDERS);
-
-    /* Allocate structures that manage who sends to what.
-       YIKES, that allDests can get really big.  We will have to work around
-       that in order to run on supercomputers.  (It is generally used for
-       tiled displays.) */
-    sendIds = malloc(comm_size * sizeof(IceTInt));
-    myDests = malloc(comm_size);
-    allDests = malloc(comm_size * comm_size);
-    sendQueue = malloc(comm_size * sizeof(IceTInt));
-    recvQueue = malloc(comm_size * sizeof(IceTInt));
-    recvFrom = malloc(comm_size * sizeof(IceTInt));
-
-  /* Convert array of ranks to a mask of ranks. */
-    for (i = 0; i < comm_size; i++) {
-        myDests[i] = 0;
-    }
-    for (i = 0; i < numMessagesSending; i++) {
-        myDests[messageDestinations[i]] = 1;
-        sendIds[messageDestinations[i]] = i;
-    }
-
-  /* We'll just handle send to self as a special case. */
-    sendToSelf = myDests[rank];
-    myDests[rank] = 0;
-
-  /* Gather masks for all processes. */
-    icetCommAllgather(myDests, comm_size, ICET_BYTE, allDests);
-
-  /* Determine communications.  We will determine communications in a
-     series of steps.  At each step, we will try to find the most send/recv
-     pairs.  Each step will be able to complete without deadlock.  Rather
-     than saving the sends and recieves per step, we will simply push them
-     into queues and run the send and receive queues in parallel later. */
-    numSend = 0;  numRecv = 0;
-    do {
-        someoneSends = 0;
-      /* We are going to keep track of what every processor receives to
-         ensure that no processor receives more than one message per
-         iteration.  Clear out the array first. */
-        for (i = 0; i < comm_size; i++) recvFrom[i] = -1;
-      /* Try to find a destination for each sender. */
-        for (sender = 0; sender < comm_size; sender++) {
-            char *localDests = allDests + sender*comm_size;
-            IceTInt receiver;
-            for (receiver = 0; receiver < comm_size; receiver++) {
-                if (localDests[receiver] && (recvFrom[receiver] < 0)) {
-                    if (messagesInOrder) {
-                      /* Make sure there is not another message that must
-                         be sent first. */
-                        IceTInt left, right;
-                        if (process_orders[sender] < process_orders[receiver]) {
-                            left = process_orders[sender];
-                            right = process_orders[receiver];
-                        } else {
-                            left = process_orders[receiver];
-                            right = process_orders[sender];
-                        }
-                        for (left++; left < right; left++) {
-                            IceTInt p = composite_order[left];
-                            if (allDests[p*comm_size + receiver]) break;
-                        }
-                        if (left != right) {
-                          /* We have to wait for someone else to send
-                             before we can send this one. */
-                            continue;
-                        }
-                    }
-                    localDests[receiver] = 0;
-                  /* This is no longer necessary since we take care of
-                     sentToSelf above
-                     
-                    if (sender == receiver) {
-                        if (rank == sender) sendToSelf = 1;
-                        continue;
-                    }
-                  */
-                    recvFrom[receiver] = sender;
-                    if (sender == rank) {
-                        sendQueue[numSend++] = receiver;
-                    }
-                    someoneSends = 1;
-                    break;
-                }
-            }
-        }
-      /* Check to see if we are receiving something this iteration. */
-        if (recvFrom[rank] >= 0) {
-            recvQueue[numRecv++] = recvFrom[rank];
-        }
-    } while (someoneSends);
-#ifdef DEBUG
-    for (i = 0; i < comm_size*comm_size; i++) {
-        if (allDests[i] != 0) {
-            icetRaiseError("Apperent deadlock encountered.",
-                           ICET_SANITY_CHECK_FAIL);
-        }
-    }
-#endif
-
-    sqi = 0;  rqi = 0;
-    if (rqi < numRecv) {
-        icetRaiseDebug1("Receiving from %d", (int)recvQueue[rqi]);
-        startLargeRecv(incomingBuffer, bufferSize, recvQueue[rqi],
-                       &requests[RECV_IDX]);
+    if (messagesInOrder) {
+        composite_order = icetUnsafeStateGetInteger(ICET_COMPOSITE_ORDER);
+        process_orders = icetUnsafeStateGetInteger(ICET_PROCESS_ORDERS);
     } else {
-        requests[RECV_IDX] = ICET_COMM_REQUEST_NULL;
+        composite_order = NULL;
+        process_orders = NULL;
     }
-    if (sendToSelf) {
+
+    /* We'll just handle send to self as a special case. */
+    if (myDestMask[rank]) {
         IceTSizeType data_size;
         IceTVoid *data;
         icetRaiseDebug("Sending to self.");
         data = (*generateDataFunc)(sendIds[rank], rank, &data_size);
         (*handleDataFunc)(data, rank);
     }
-    if (sqi < numSend) {
-        icetRaiseDebug1("Sending to %d", (int)sendQueue[sqi]);
-        startLargeSend(sendQueue[sqi], &requests[SEND_IDX],
-                       generateDataFunc, sendIds);
+
+    /* We have to create a communication pattern that is guaranteed not to
+       deadlock even if we don't know what everyone is sending.  To do this, we
+       use a particular type of communication pattern.  If order does not
+       matter, then each process asynchronously sends to rank+1 and receives
+       from rank-1 (with wraparound between 0 and num_proc-1).  Because there
+       every sender has receive and vice versa, this is guaranteed by MPI to
+       complete.  This is then repeated sending to rank+2, rank+3, and so on.
+       The ordered communication is similar except that there is no wraparound.
+       If the sender or receiver is outside the range, no communication happens.
+       The communication is then repeated in the other direction.  Again, all
+       send/receives are matched and eventually everyone sends/receives to/from
+       everyone.
+
+       The trick we are going to pull is realize that the actual messages are
+       probably sparse.  Thus, we won't actually do a send/receive if no message
+       is being passed.  However, this does not change the fact that all sends
+       and receives are matched up. */
+
+    if (messagesInOrder) {
+        order_rank = process_orders[rank];
     } else {
-        requests[SEND_IDX] = ICET_COMM_REQUEST_NULL;
-    }
-    while ((rqi < numRecv) || (sqi < numSend)) {
-        icetRaiseDebug("Starting wait.");
-        i = icetCommWaitany(2, requests);
-        icetRaiseDebug1("Wait returned with %d finished.", (int)i);
-        switch (i) {
-          case RECV_IDX:
-              icetRaiseDebug1("Receive from %d finished", (int)recvQueue[rqi]);
-              (*handleDataFunc)(incomingBuffer, recvQueue[rqi]);
-              rqi++;
-              if (rqi < numRecv) {
-                  icetRaiseDebug1("Receiving from %d", (int)recvQueue[rqi]);
-                  startLargeRecv(incomingBuffer, bufferSize, recvQueue[rqi],
-                                 &requests[RECV_IDX]);
-              }
-              continue;
-          case SEND_IDX:
-              icetRaiseDebug1("Send to %d finished", (int)sendQueue[sqi]);
-              sqi++;
-              if (sqi < numSend) {
-                  icetRaiseDebug1("Sending to %d", (int)sendQueue[sqi]);
-                  startLargeSend(sendQueue[sqi], &requests[SEND_IDX],
-                                 generateDataFunc, sendIds);
-              }
-              continue;
-        }
+        order_rank = rank;
     }
 
-    free(sendIds);
-    free(myDests);
-    free(allDests);
-    free(sendQueue);
-    free(recvQueue);
-    free(recvFrom);
+    recv_order_idx = send_order_idx = order_rank;
+    recv_iter_state = ICET_SEND_RECV_LARGE_ITER_BACKWARD;
+    send_iter_state = ICET_SEND_RECV_LARGE_ITER_FORWARD;
+    requests[0] = requests[1] = ICET_COMM_REQUEST_NULL;
+
+    while (   (send_iter_state != ICET_SEND_RECV_LARGE_ITER_DONE)
+           || (recv_iter_state != ICET_SEND_RECV_LARGE_ITER_DONE) ) {
+        int request_finished_idx;
+
+        icetSendRecvLargePostReceive(mySrcMask,
+                                     messagesInOrder,
+                                     order_rank,
+                                     incomingBuffer,
+                                     bufferSize,
+                                     &recv_order_idx,
+                                     &recv_iter_state,
+                                     &requests[RECV_IDX]);
+        icetSendRecvLargePostSend(sendIds,
+                                  myDestMask,
+                                  messagesInOrder,
+                                  generateDataFunc,
+                                  order_rank,
+                                  &send_order_idx,
+                                  &send_iter_state,
+                                  &requests[SEND_IDX]);
+
+        request_finished_idx = icetCommWaitany(2, requests);
+        if (request_finished_idx == RECV_IDX) {
+            IceTInt src_rank;
+            if (messagesInOrder) {
+                src_rank = composite_order[recv_iter_state];
+            } else {
+                src_rank = recv_iter_state;
+            }
+            (*handleDataFunc)(incomingBuffer, src_rank);
+        }
+    }
+}
+
+void icetSendRecvLargeMessages(IceTInt numMessagesSending,
+                               const IceTInt *messageDestinations,
+                               IceTBoolean messagesInOrder,
+                               IceTGenerateData generateDataFunc,
+                               IceTHandleData handleDataFunc,
+                               IceTVoid *incomingBuffer,
+                               IceTSizeType bufferSize)
+{
+    IceTInt *sendIds;
+    IceTBoolean *myDestMask;
+    IceTBoolean *mySrcMask;
+
+    icetSendRecvLargeBuildMessageMasks(numMessagesSending,
+                                       messageDestinations,
+                                       &sendIds,
+                                       &myDestMask,
+                                       &mySrcMask);
+
+    icetDoSendRecvLarge(sendIds,
+                        myDestMask,
+                        mySrcMask,
+                        messagesInOrder,
+                        generateDataFunc,
+                        handleDataFunc,
+                        incomingBuffer,
+                        bufferSize);
 }
 
 void icetSingleImageCompose(IceTInt *compose_group,
@@ -439,6 +596,9 @@ void icetSingleImageCompose(IceTInt *compose_group,
                                   result_image,
                                   piece_offset);
 }
+
+#define ICET_IMAGE_COLLECT_OFFSET_BUF ICET_STRATEGY_COMMON_BUF_0
+#define ICET_IMAGE_COLLECT_SIZE_BUF ICET_STRATEGY_COMMON_BUF_1
 
 void icetSingleImageCollect(const IceTSparseImage input_image,
                             IceTInt dest,

@@ -103,3 +103,5 @@ Const versions of icetImageGetColor* and icetImageGetDepth* functions.
 
 Added Alltoall to communicator.  (Search for Allgather for places to add in
 documentation.)
+
+icetSendRecvLargeMessages takes const array for messageDestinations.
