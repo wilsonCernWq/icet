@@ -546,7 +546,7 @@ static void icetDoSendRecvLarge(const IceTInt *sendIds,
             if (request_finished_idx == RECV_IDX) {
                 IceTInt src_rank;
                 if (messagesInOrder) {
-                    src_rank = composite_order[recv_iter_state];
+                    src_rank = composite_order[recv_order_idx];
                 } else {
                     src_rank = recv_iter_state;
                 }
