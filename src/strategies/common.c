@@ -516,10 +516,7 @@ static void icetDoSendRecvLarge(const IceTInt *sendIds,
     send_iter_state = ICET_SEND_RECV_LARGE_ITER_FORWARD;
     requests[0] = requests[1] = ICET_COMM_REQUEST_NULL;
 
-    while (   (send_iter_state != ICET_SEND_RECV_LARGE_ITER_DONE)
-           || (recv_iter_state != ICET_SEND_RECV_LARGE_ITER_DONE) ) {
-        int request_finished_idx;
-
+    while (ICET_TRUE) {
         icetSendRecvLargePostReceive(mySrcMask,
                                      messagesInOrder,
                                      order_rank,
@@ -537,15 +534,24 @@ static void icetDoSendRecvLarge(const IceTInt *sendIds,
                                   &send_iter_state,
                                   &requests[SEND_IDX]);
 
-        request_finished_idx = icetCommWaitany(2, requests);
-        if (request_finished_idx == RECV_IDX) {
-            IceTInt src_rank;
-            if (messagesInOrder) {
-                src_rank = composite_order[recv_iter_state];
-            } else {
-                src_rank = recv_iter_state;
+        /* If finished with all messages, quit. */ {
+            IceTBoolean finished;
+            finished  = (send_iter_state == ICET_SEND_RECV_LARGE_ITER_DONE);
+            finished &= (recv_iter_state == ICET_SEND_RECV_LARGE_ITER_DONE);
+            if (finished) break;
+        }
+
+        /* Wait for some some message to come in before continuing. */ {
+            int request_finished_idx = icetCommWaitany(2, requests);
+            if (request_finished_idx == RECV_IDX) {
+                IceTInt src_rank;
+                if (messagesInOrder) {
+                    src_rank = composite_order[recv_iter_state];
+                } else {
+                    src_rank = recv_iter_state;
+                }
+                (*handleDataFunc)(incomingBuffer, src_rank);
             }
-            (*handleDataFunc)(incomingBuffer, src_rank);
         }
     }
 }
