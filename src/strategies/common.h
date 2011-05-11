@@ -96,8 +96,10 @@ void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
    messageDestinations - An array of size numMessagesSending that contains
         the ranks of message destinations.
    messagesInOrder - If true, then messages will be received in the order
-        specified by the ICET_PROCESS_ORDERS state variable.  If false,
-        messages may come in an arbitrary order.
+        specified by the ICET_PROCESS_ORDERS state variable.  The locally
+        generated message will come in first, followed by messages adjacent to
+        either the left or right.  If messagesInOrder is false, messages may
+        come in an arbitrary order.
    generateDataFunc - A callback function that generates messages.  The
         function is given the index in messageDestinations and the rank of
         the destination as arguments.  The data of the message and the size
@@ -118,7 +120,7 @@ typedef IceTVoid *(*IceTGenerateData)(IceTInt id, IceTInt dest,
                                       IceTSizeType *size);
 typedef void (*IceTHandleData)(void *buffer, IceTInt src);
 void icetSendRecvLargeMessages(IceTInt numMessagesSending,
-                               IceTInt *messageDestinations,
+                               const IceTInt *messageDestinations,
                                IceTBoolean messagesInOrder,
                                IceTGenerateData generateDataFunc,
                                IceTHandleData handleDataFunc,

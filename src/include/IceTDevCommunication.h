@@ -59,6 +59,10 @@ ICET_EXPORT void icetCommAllgather(const void *sendbuf,
                                    IceTSizeType sendcount,
                                    IceTEnum type,
                                    void *recvbuf);
+ICET_EXPORT void icetCommAlltoall(const void *sendbuf,
+                                  IceTSizeType sendcount,
+                                  IceTEnum type,
+                                  void *recvbuf);
 ICET_EXPORT IceTCommRequest icetCommIsend(const void *buf,
                                           IceTSizeType count,
                                           IceTEnum datatype,

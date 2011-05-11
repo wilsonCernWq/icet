@@ -100,3 +100,8 @@ ICET_MAX_IMAGE_SPLIT environment variable, cmake variable, state variable
 All the matrix math helpers icetMatrix* in IceTDevMatrix.h
 
 Const versions of icetImageGetColor* and icetImageGetDepth* functions.
+
+Added Alltoall to communicator.  (Search for Allgather for places to add in
+documentation.)
+
+icetSendRecvLargeMessages takes const array for messageDestinations.
