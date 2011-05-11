@@ -279,7 +279,7 @@ static void icetSendRecvLargePostReceive(const IceTBoolean *mySrcMask,
 {
     IceTInt comm_size;
     const IceTInt *composite_order;
-    IceTInt src_rank;
+    IceTInt src_rank = -1;
 
     /* If we are still waiting for a receive to finish, do nothing. */
     if (*recv_request_p != ICET_COMM_REQUEST_NULL) return;
@@ -346,6 +346,9 @@ static void icetSendRecvLargePostReceive(const IceTBoolean *mySrcMask,
 
     /* If we have not finished, then we must be ready to send a message. */
     if (*recv_iter_state_p != ICET_SEND_RECV_LARGE_ITER_DONE) {
+        if (src_rank < 0) {
+            icetRaiseError("Computed invalid src_rank", ICET_SANITY_CHECK_FAIL);
+        }
         *recv_request_p = icetCommIrecv(incomingBuffer,
                                         bufferSize,
                                         ICET_BYTE,
@@ -365,7 +368,7 @@ static void icetSendRecvLargePostSend(const IceTInt *sendIds,
 {
     IceTInt comm_size;
     const IceTInt *composite_order;
-    IceTInt dest_rank;
+    IceTInt dest_rank = -1;
 
     /* If we are still waiting for a send to finish, do nothing. */
     if (*send_request_p != ICET_COMM_REQUEST_NULL) return;
@@ -434,6 +437,9 @@ static void icetSendRecvLargePostSend(const IceTInt *sendIds,
     if (*send_iter_state_p != ICET_SEND_RECV_LARGE_ITER_DONE) {
         IceTSizeType data_size;
         IceTVoid *data;
+        if (dest_rank < 0) {
+            icetRaiseError("Computed invalid dest_rank",ICET_SANITY_CHECK_FAIL);
+        }
         data = (*generateDataFunc)(sendIds[dest_rank], dest_rank, &data_size);
         *send_request_p = icetCommIsend(data,
                                         data_size,
