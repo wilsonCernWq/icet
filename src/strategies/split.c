@@ -60,6 +60,8 @@ static void icetCollectImage(IceTImage imageFragment,
     color_format = icetImageGetColorFormat(imageFragment);
     depth_format = icetImageGetDepthFormat(imageFragment);
 
+    icetImageCorrectBackground(imageFragment);
+
     icetTimingCollectBegin();
 
     if (color_format != ICET_IMAGE_COLOR_NONE) {

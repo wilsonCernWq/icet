@@ -84,5 +84,9 @@ IceTImage icetDirectCompose(void)
         icetClearImage(image);
     }
 
+    if (display_tile >= 0) {
+        icetImageCorrectBackground(image);
+    }
+
     return image;
 }
