@@ -2002,6 +2002,47 @@ void icetDecompressSubImage(const IceTSparseImage compressed_image,
 #include "decompress_func_body.h"
 }
 
+void icetDecompressImageCorrectBackground(const IceTSparseImage compressed_image,
+                                          IceTImage image)
+{
+    icetImageSetDimensions(image,
+                           icetSparseImageGetWidth(compressed_image),
+                           icetSparseImageGetHeight(compressed_image));
+
+    icetDecompressSubImageCorrectBackground(compressed_image, 0, image);
+}
+
+void icetDecompressSubImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTSizeType offset,
+                                         IceTImage image)
+{
+    IceTBoolean need_correction;
+    const IceTFloat *background_color;
+    const IceTUByte *background_color_word;
+
+    icetGetBooleanv(ICET_NEED_BACKGROUND_CORRECTION, &need_correction);
+    if (!need_correction) {
+        /* Do a normal decompress. */
+        icetDecompressSubImage(compressed_image, offset, image);
+    }
+
+    ICET_TEST_IMAGE_HEADER(image);
+    ICET_TEST_SPARSE_IMAGE_HEADER(compressed_image);
+
+    background_color = icetUnsafeStateGetFloat(ICET_TRUE_BACKGROUND_COLOR);
+    background_color_word =
+        (IceTUByte*)icetUnsafeStateGetInteger(ICET_TRUE_BACKGROUND_COLOR_WORD);
+
+#define INPUT_SPARSE_IMAGE      compressed_image
+#define OUTPUT_IMAGE            image
+#define TIME_DECOMPRESSION
+#define OFFSET                  offset
+#define PIXEL_COUNT             icetSparseImageGetNumPixels(compressed_image)
+#define CORRECT_BACKGROUND
+#include "decompress_func_body.h"
+}
+
 
 void icetComposite(IceTImage destBuffer, const IceTImage srcBuffer,
                    int srcOnTop)

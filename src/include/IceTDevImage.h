@@ -153,6 +153,15 @@ ICET_EXPORT void icetDecompressSubImage(const IceTSparseImage compressed_image,
                                         IceTSizeType offset,
                                         IceTImage image);
 
+ICET_EXPORT void icetDecompressImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTImage image);
+
+ICET_EXPORT void icetDecompressSubImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTSizeType offset,
+                                         IceTImage image);
+
 ICET_EXPORT void icetComposite(IceTImage destBuffer,
                                const IceTImage srcBuffer,
                                int srcOnTop);
