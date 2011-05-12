@@ -108,3 +108,6 @@ icetSendRecvLargeMessages takes const array for messageDestinations.
 
 ICET_CORRECT_COLORED_BACKGROUND is now the responsibility of the strategy,
 not done automatically.
+
+Added internal state variables ICET_NEED_BACKGROUND_CORRECTION,
+ICET_TRUE_BACKGROUND_COLOR, and ICET_TRUE_BACKGROUND_COLOR_WORD.

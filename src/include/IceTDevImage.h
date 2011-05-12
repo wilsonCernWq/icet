@@ -171,6 +171,8 @@ ICET_EXPORT void icetCompressedCompressedComposite(
                                              const IceTSparseImage back_buffer,
                                              IceTSparseImage dest_buffer);
 
+ICET_EXPORT void icetImageCorrectBackground(IceTImage image);
+
 #define ICET_BLEND_UBYTE(front, back, dest)                             \
 {                                                                       \
     IceTUInt afactor = 255 - (front)[3];                                \

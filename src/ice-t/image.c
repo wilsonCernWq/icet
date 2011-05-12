@@ -2187,6 +2187,53 @@ void icetCompressedCompressedComposite(const IceTSparseImage front_buffer,
     icetTimingBlendEnd();
 }
 
+void icetImageCorrectBackground(IceTImage image)
+{
+    IceTBoolean need_correction;
+    IceTSizeType num_pixels;
+    IceTEnum color_format;
+
+    icetGetBooleanv(ICET_NEED_BACKGROUND_CORRECTION, &need_correction);
+    if (!need_correction) { return; }
+
+    num_pixels = icetImageGetNumPixels(image);
+    color_format = icetImageGetColorFormat(image);
+
+    icetTimingBlendBegin();
+
+    if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE) {
+        IceTUByte *color = icetImageGetColorub(image);
+        IceTInt background_color_word;
+        IceTUByte *bc;
+        IceTSizeType p;
+
+        icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD,
+                        &background_color_word);
+        bc = (IceTUByte *)(&background_color_word);
+
+        for (p = 0; p < num_pixels; p++) {
+            ICET_UNDER_UBYTE(bc, color);
+            color += 4;
+        }
+    } else if (color_format == ICET_IMAGE_COLOR_RGBA_FLOAT) {
+        IceTFloat *color = icetImageGetColorf(image);
+        IceTFloat background_color[4];
+        IceTSizeType p;
+
+        icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, background_color);
+
+        for (p = 0; p < num_pixels; p++) {
+            ICET_UNDER_FLOAT(background_color, color);
+            color += 4;
+        }
+    } else {
+        icetRaiseError("Encountered invalid color buffer type"
+                       " with color blending.", ICET_SANITY_CHECK_FAIL);
+    }
+
+    icetTimingBlendEnd();
+}
+
 static IceTImage renderTile(int tile,
                             IceTInt *screen_viewport,
                             IceTInt *target_viewport,
