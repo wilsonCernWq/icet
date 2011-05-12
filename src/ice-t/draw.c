@@ -190,8 +190,7 @@ static void drawUseBackgroundColor(const IceTFloat *background_color)
         icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, 0);
 
         icetGetIntegerv(ICET_TILE_DISPLAYED, &display_tile);
-        if (   (display_tile >= 0)
-            && (background_color_word != 0)
+        if (   (background_color_word != 0)
             && icetIsEnabled(ICET_CORRECT_COLORED_BACKGROUND) ) {
             icetStateSetBoolean(ICET_NEED_BACKGROUND_CORRECTION, ICET_TRUE);
         } else {
