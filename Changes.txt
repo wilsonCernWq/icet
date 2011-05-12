@@ -105,3 +105,6 @@ Added Alltoall to communicator.  (Search for Allgather for places to add in
 documentation.)
 
 icetSendRecvLargeMessages takes const array for messageDestinations.
+
+ICET_CORRECT_COLORED_BACKGROUND is now the responsibility of the strategy,
+not done automatically.
