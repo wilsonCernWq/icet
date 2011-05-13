@@ -71,21 +71,24 @@ IceTImage icetDirectCompose(void)
                                  outSparseImage,
                                  tile_image_dest);
 
-    if ((display_tile >= 0) && (num_contributors < 1)) {
-      /* Must be displaying a blank tile. */
-        const IceTInt *tile_viewports
-            = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS);
-        const IceTInt *display_tile_viewport = tile_viewports + 4*display_tile;
-        IceTInt display_tile_width = display_tile_viewport[2];
-        IceTInt display_tile_height = display_tile_viewport[3];
-
-        icetRaiseDebug("Returning blank tile.");
-        icetImageSetDimensions(image, display_tile_width, display_tile_height);
-        icetClearImage(image);
-    }
-
     if (display_tile >= 0) {
-        icetImageCorrectBackground(image);
+        if (num_contributors > 0) {
+            icetImageCorrectBackground(image);
+        } else {
+            /* Must be displaying a blank tile. */
+            const IceTInt *tile_viewports
+                = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS);
+            const IceTInt *display_tile_viewport
+                = tile_viewports + 4*display_tile;
+            IceTInt display_tile_width = display_tile_viewport[2];
+            IceTInt display_tile_height = display_tile_viewport[3];
+
+            icetRaiseDebug("Returning blank tile.");
+            icetImageSetDimensions(image,
+                                   display_tile_width,
+                                   display_tile_height);
+            icetClearImageTrueBackground(image);
+        }
     }
 
     return image;

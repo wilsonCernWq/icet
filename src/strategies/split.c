@@ -124,7 +124,7 @@ static void icetCollectImage(IceTImage imageFragment,
                 }
             }
         } else {
-            icetClearImage(fullImage);
+            icetClearImageTrueBackground(fullImage);
         }
     }
 
@@ -202,7 +202,7 @@ IceTImage icetSplitCompose(void)
             my_height = tile_viewports[4*tile_displayed + 3];
             fullImage = icetGetStateBufferImage(SPLIT_FULL_IMAGE_BUFFER,
                                                 my_width, my_height);
-            icetClearImage(fullImage);
+            icetClearImageTrueBackground(fullImage);
         }
         return fullImage;
     }

@@ -226,13 +226,35 @@ IceTImage icetVtreeCompose(void)
   /* Hacks for when "this" tile was not rendered. */
     if ((tile_displayed >= 0) && (tile_displayed != tile_held)) {
         if (all_contained_tmasks[rank*num_tiles + tile_displayed]) {
-          /* Only "this" node draws "this" tile.  Because the image never */
-          /* needed to be transferred, it was never rendered above.  Just */
-          /* render it now.                                               */
+          /* Only "this" node draws "this" tile.  Because the image never needed
+              to be transferred, it was never rendered above.  Just render it
+              now.  We might save some time by rendering with the true
+              background color rather than correcting it later. */
+            IceTFloat true_background[4];
+            IceTInt true_background_word;
+            IceTFloat original_background[4];
+            IceTInt original_background_word;
+
+            icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, true_background);
+            icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD,
+                            &true_background_word);
+
+            icetGetFloatv(ICET_BACKGROUND_COLOR, original_background);
+            icetGetIntegerv(ICET_BACKGROUND_COLOR_WORD,
+                            &original_background_word);
+
+            icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, true_background);
+            icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD,
+                                true_background_word);
+
             icetRaiseDebug("Rendering tile to display.");
           /* This may uncessarily read a buffer if not outputing an input
              buffer */
             icetGetTileImage(tile_displayed, image);
+
+            icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, original_background);
+            icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD,
+                                original_background_word);
         } else {
           /* "This" tile is blank. */
             const IceTInt *display_tile_viewport
@@ -243,11 +265,9 @@ IceTImage icetVtreeCompose(void)
             icetRaiseDebug("Returning blank image.");
             icetImageSetDimensions(
                                 image, display_tile_width, display_tile_height);
-            icetClearImage(image);
+            icetClearImageTrueBackground(image);
         }
-    }
-
-    if (tile_displayed >= 0) {
+    } else if (tile_displayed >= 0) {
         icetImageCorrectBackground(image);
     }
 

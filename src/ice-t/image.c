@@ -2275,6 +2275,28 @@ void icetImageCorrectBackground(IceTImage image)
     icetTimingBlendEnd();
 }
 
+void icetClearImageTrueBackground(IceTImage image)
+{
+    IceTFloat true_background[4];
+    IceTInt true_background_word;
+    IceTFloat original_background[4];
+    IceTInt original_background_word;
+
+    icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, true_background);
+    icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD, &true_background_word);
+
+    icetGetFloatv(ICET_BACKGROUND_COLOR, original_background);
+    icetGetIntegerv(ICET_BACKGROUND_COLOR_WORD, &original_background_word);
+
+    icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, true_background);
+    icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, true_background_word);
+
+    icetClearImage(image);
+
+    icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, original_background);
+    icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, original_background_word);
+}
+
 static IceTImage renderTile(int tile,
                             IceTInt *screen_viewport,
                             IceTInt *target_viewport,

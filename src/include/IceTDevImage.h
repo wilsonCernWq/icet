@@ -181,6 +181,7 @@ ICET_EXPORT void icetCompressedCompressedComposite(
                                              IceTSparseImage dest_buffer);
 
 ICET_EXPORT void icetImageCorrectBackground(IceTImage image);
+ICET_EXPORT void icetClearImageTrueBackground(IceTImage image);
 
 #define ICET_BLEND_UBYTE(front, back, dest)                             \
 {                                                                       \
