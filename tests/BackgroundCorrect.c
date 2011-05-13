@@ -271,9 +271,7 @@ static int BackgroundCorrectTryStrategy()
     int result = TEST_PASSED;
     int strategy_idx;
 
-    for (strategy_idx = 0;
-         strategy_idx < SINGLE_IMAGE_STRATEGY_LIST_SIZE;
-         strategy_idx++) {
+    for (strategy_idx = 0; strategy_idx < STRATEGY_LIST_SIZE; strategy_idx++) {
         icetStrategy(strategy_list[strategy_idx]);
         printstat("Trying strategy %s\n", icetGetStrategyName());
         result += BackgroundCorrectTryRender();
