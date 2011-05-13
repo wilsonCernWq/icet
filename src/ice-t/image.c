@@ -2002,6 +2002,47 @@ void icetDecompressSubImage(const IceTSparseImage compressed_image,
 #include "decompress_func_body.h"
 }
 
+void icetDecompressImageCorrectBackground(const IceTSparseImage compressed_image,
+                                          IceTImage image)
+{
+    icetImageSetDimensions(image,
+                           icetSparseImageGetWidth(compressed_image),
+                           icetSparseImageGetHeight(compressed_image));
+
+    icetDecompressSubImageCorrectBackground(compressed_image, 0, image);
+}
+
+void icetDecompressSubImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTSizeType offset,
+                                         IceTImage image)
+{
+    IceTBoolean need_correction;
+    const IceTFloat *background_color;
+    const IceTUByte *background_color_word;
+
+    icetGetBooleanv(ICET_NEED_BACKGROUND_CORRECTION, &need_correction);
+    if (!need_correction) {
+        /* Do a normal decompress. */
+        icetDecompressSubImage(compressed_image, offset, image);
+    }
+
+    ICET_TEST_IMAGE_HEADER(image);
+    ICET_TEST_SPARSE_IMAGE_HEADER(compressed_image);
+
+    background_color = icetUnsafeStateGetFloat(ICET_TRUE_BACKGROUND_COLOR);
+    background_color_word =
+        (IceTUByte*)icetUnsafeStateGetInteger(ICET_TRUE_BACKGROUND_COLOR_WORD);
+
+#define INPUT_SPARSE_IMAGE      compressed_image
+#define OUTPUT_IMAGE            image
+#define TIME_DECOMPRESSION
+#define OFFSET                  offset
+#define PIXEL_COUNT             icetSparseImageGetNumPixels(compressed_image)
+#define CORRECT_BACKGROUND
+#include "decompress_func_body.h"
+}
+
 
 void icetComposite(IceTImage destBuffer, const IceTImage srcBuffer,
                    int srcOnTop)
@@ -2185,6 +2226,75 @@ void icetCompressedCompressedComposite(const IceTSparseImage front_buffer,
 #include "cc_composite_func_body.h"
 
     icetTimingBlendEnd();
+}
+
+void icetImageCorrectBackground(IceTImage image)
+{
+    IceTBoolean need_correction;
+    IceTSizeType num_pixels;
+    IceTEnum color_format;
+
+    icetGetBooleanv(ICET_NEED_BACKGROUND_CORRECTION, &need_correction);
+    if (!need_correction) { return; }
+
+    num_pixels = icetImageGetNumPixels(image);
+    color_format = icetImageGetColorFormat(image);
+
+    icetTimingBlendBegin();
+
+    if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE) {
+        IceTUByte *color = icetImageGetColorub(image);
+        IceTInt background_color_word;
+        IceTUByte *bc;
+        IceTSizeType p;
+
+        icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD,
+                        &background_color_word);
+        bc = (IceTUByte *)(&background_color_word);
+
+        for (p = 0; p < num_pixels; p++) {
+            ICET_UNDER_UBYTE(bc, color);
+            color += 4;
+        }
+    } else if (color_format == ICET_IMAGE_COLOR_RGBA_FLOAT) {
+        IceTFloat *color = icetImageGetColorf(image);
+        IceTFloat background_color[4];
+        IceTSizeType p;
+
+        icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, background_color);
+
+        for (p = 0; p < num_pixels; p++) {
+            ICET_UNDER_FLOAT(background_color, color);
+            color += 4;
+        }
+    } else {
+        icetRaiseError("Encountered invalid color buffer type"
+                       " with color blending.", ICET_SANITY_CHECK_FAIL);
+    }
+
+    icetTimingBlendEnd();
+}
+
+void icetClearImageTrueBackground(IceTImage image)
+{
+    IceTFloat true_background[4];
+    IceTInt true_background_word;
+    IceTFloat original_background[4];
+    IceTInt original_background_word;
+
+    icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, true_background);
+    icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD, &true_background_word);
+
+    icetGetFloatv(ICET_BACKGROUND_COLOR, original_background);
+    icetGetIntegerv(ICET_BACKGROUND_COLOR_WORD, &original_background_word);
+
+    icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, true_background);
+    icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, true_background_word);
+
+    icetClearImage(image);
+
+    icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, original_background);
+    icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, original_background_word);
 }
 
 static IceTImage renderTile(int tile,

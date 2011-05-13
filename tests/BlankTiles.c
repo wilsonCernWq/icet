@@ -75,8 +75,8 @@ static int BlankTilesDoTest(void)
         if (rank == 0) {
             /* printrank("Rank == 0, tile should have stuff in it.\n"); */
         } else if (rank < tile_dim*tile_dim) {
-            IceTUByte *cb;
-            int pixel;
+            IceTFloat *cb;
+            int color_component;
 
             if (   (my_width != icetImageGetWidth(image))
                 || (my_height != icetImageGetHeight(image)) ) {
@@ -85,9 +85,11 @@ static int BlankTilesDoTest(void)
             }
 
             /* printrank("Checking returned image data.\n"); */
-            cb = icetImageGetColorub(image);
-            for (pixel = 0; pixel < my_width*my_height*4; pixel++) {
-                if (cb[pixel] != 0) {
+            cb = icetImageGetColorf(image);
+            for (color_component = 0;
+                 color_component < my_width*my_height*4;
+                 color_component++) {
+                if (cb[color_component] != 0.25f) {
                     printrank("Found bad pixel!!!!!!!!\n");
                     result = TEST_FAILED;
                     break;
@@ -106,13 +108,19 @@ static int BlankTilesRun()
     int result = TEST_PASSED;
     int strategy_index;
 
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(0.25f, 0.25f, 0.25f, 0.25f);
 
     icetGLDrawCallback(draw);
     icetBoundingBoxd(-0.5, 0.5, -0.5, 0.5, -0.5, 0.5);
 
-    icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
-    icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
+    /* Turn on blending and colored background collection.  Even though in
+       general this would not work unless you also ordered the compositing, we
+       just want to make sure we get the right color in empty tiles for this
+       test. */
+    icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_FLOAT);
+    icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
+    icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
+    icetEnable(ICET_CORRECT_COLORED_BACKGROUND);
 
     for (strategy_index = 0;
          strategy_index < STRATEGY_LIST_SIZE; strategy_index++) {

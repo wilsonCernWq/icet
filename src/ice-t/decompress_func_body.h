@@ -34,6 +34,9 @@
  *                      values.
  *              BLEND_RGBA_FLOAT(src, dest) - same as above except src and dest
  *                      are IceTFloat arrays.
+ *	CORRECT_BACKGROUND - if defined, the output color will be blended
+ *		with the true background color.  This should only be set
+ *		if ICET_NEED_BACKGROUND_CORRECTION is true.
  *      OFFSET - If defined to a number (or variable holding a number), skips
  *              that many pixels at the beginning of the image.
  *      PIXEL_COUNT - If defined to a number (or a variable holding a number),
@@ -247,11 +250,21 @@
 #ifdef OFFSET
             _color += OFFSET;
 #endif
+#ifdef CORRECT_BACKGROUND
+            icetGetIntegerv(ICET_TRUE_BACKGROUND_COLOR_WORD,
+                            (IceTInt *)&_background_color);
+#else
             icetGetIntegerv(ICET_BACKGROUND_COLOR_WORD,
                             (IceTInt *)&_background_color);
+#endif
 #ifdef COMPOSITE
 #define COPY_PIXEL(c_src, c_dest) \
             BLEND_RGBA_UBYTE(((IceTUByte*)c_src), ((IceTUByte*)c_dest))
+#elif defined(CORRECT_BACKGROUND)
+#define COPY_PIXEL(c_src, c_dest)                               \
+            ICET_BLEND_UBYTE(((IceTUByte*)c_src),               \
+                             ((IceTUByte*)&_background_color),  \
+                             ((IceTUByte*)c_dest))
 #else
 #define COPY_PIXEL(c_src, c_dest) \
             c_dest[0] = c_src[0];
@@ -282,9 +295,16 @@
 #ifdef OFFSET
             _color += 4*(OFFSET);
 #endif
+#ifdef CORRECT_BACKGROUND
+            icetGetFloatv(ICET_TRUE_BACKGROUND_COLOR, _background_color);
+#else
             icetGetFloatv(ICET_BACKGROUND_COLOR, _background_color);
+#endif
 #ifdef COMPOSITE
 #define COPY_PIXEL(c_src, c_dest) BLEND_RGBA_FLOAT(c_src, c_dest);
+#elif defined(CORRECT_BACKGROUND)
+#define COPY_PIXEL(c_src, c_dest) \
+            ICET_BLEND_FLOAT(c_src, _background_color, c_dest);
 #else
 #define COPY_PIXEL(c_src, c_dest)                               \
                                 c_dest[0] = c_src[0];           \

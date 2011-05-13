@@ -17,6 +17,7 @@ IF (NOT ICET_TESTS_USE_OPENGL)
 ENDIF (NOT ICET_TESTS_USE_OPENGL)
 
 SET(MyTests
+  BackgroundCorrect.c
   CompressionSize.c
   Interlace.c
   MaxImageSplit.c

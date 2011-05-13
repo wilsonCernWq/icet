@@ -14,6 +14,8 @@
 #include <IceTGL.h>
 #endif
 
+#include <IceTDevCommunication.h>
+
 #ifndef __USE_POSIX
 #define __USE_POSIX
 #endif
@@ -380,10 +382,12 @@ void swap_buffers(void)
 }
 #endif
 
+#define TEST_RESULT_TAG 3492
 extern void finalize_communication(void);
-void finalize_test(int result)
+void finalize_test(IceTInt result)
 {
     IceTInt rank;
+    IceTInt num_proc;
 
 #ifdef ICET_TESTS_USE_OPENGL
     checkOglError();
@@ -391,7 +395,18 @@ void finalize_test(int result)
     checkIceTError();
 
     icetGetIntegerv(ICET_RANK, &rank);
+    icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
+
     if (rank == 0) {
+        IceTInt p_id;
+        for (p_id = 1; p_id < num_proc; p_id++) {
+            IceTInt remote_result;
+            icetCommRecv(&remote_result, 1, ICET_INT, p_id, TEST_RESULT_TAG);
+            if (remote_result != TEST_PASSED) {
+                result = remote_result;
+            }
+        }
+
         switch (result) {
           case TEST_PASSED:
               printf("***Test Passed***\n");
@@ -403,9 +418,12 @@ void finalize_test(int result)
               printf("***TEST NOT PASSED***\n");
               break;
           case TEST_FAILED:
+          default:
               printf("***TEST FAILED***\n");
               break;
         }
+    } else {
+        icetCommSend(&result, 1, ICET_INT, 0, TEST_RESULT_TAG);
     }
 
     icetDestroyContext(context);

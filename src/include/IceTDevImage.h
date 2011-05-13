@@ -153,6 +153,15 @@ ICET_EXPORT void icetDecompressSubImage(const IceTSparseImage compressed_image,
                                         IceTSizeType offset,
                                         IceTImage image);
 
+ICET_EXPORT void icetDecompressImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTImage image);
+
+ICET_EXPORT void icetDecompressSubImageCorrectBackground(
+                                         const IceTSparseImage compressed_image,
+                                         IceTSizeType offset,
+                                         IceTImage image);
+
 ICET_EXPORT void icetComposite(IceTImage destBuffer,
                                const IceTImage srcBuffer,
                                int srcOnTop);
@@ -170,6 +179,9 @@ ICET_EXPORT void icetCompressedCompressedComposite(
                                              const IceTSparseImage front_buffer,
                                              const IceTSparseImage back_buffer,
                                              IceTSparseImage dest_buffer);
+
+ICET_EXPORT void icetImageCorrectBackground(IceTImage image);
+ICET_EXPORT void icetClearImageTrueBackground(IceTImage image);
 
 #define ICET_BLEND_UBYTE(front, back, dest)                             \
 {                                                                       \

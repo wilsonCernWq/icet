@@ -515,7 +515,7 @@ IceTImage reduceCollect(const IceTSparseImage composited_image,
     if ((tile_displayed >= 0) && (tile_displayed != compose_tile)) {
         /* Return empty image if nothing in this tile. */
         icetRaiseDebug("Clearing pixels");
-        icetClearImage(result_image);
+        icetClearImageTrueBackground(result_image);
     }
 
     return result_image;

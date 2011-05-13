@@ -163,23 +163,25 @@ void icetDataReplicationGroupColor(IceTInt color)
 
 static IceTFloat black[] = {0.0f, 0.0f, 0.0f, 0.0f};
 
-static void drawUseBackgroundColor(const IceTFloat *background_color,
-                                   IceTUInt *background_color_word_p,
-                                   IceTBoolean *need_color_correction_p)
+static void drawUseBackgroundColor(const IceTFloat *background_color)
 {
-  IceTBoolean use_color_blending
-    = (IceTBoolean)(   *(icetUnsafeStateGetInteger(ICET_COMPOSITE_MODE))
-                    == ICET_COMPOSITE_MODE_BLEND);
+    IceTUInt background_color_word;
+    IceTBoolean use_color_blending
+        = (IceTBoolean)(   *(icetUnsafeStateGetInteger(ICET_COMPOSITE_MODE))
+                        == ICET_COMPOSITE_MODE_BLEND);
 
-  /* Make sure background color is up to date. */
-    ((IceTUByte *)background_color_word_p)[0]
-      = (IceTUByte)(255*background_color[0]);
-    ((IceTUByte *)background_color_word_p)[1]
-      = (IceTUByte)(255*background_color[1]);
-    ((IceTUByte *)background_color_word_p)[2]
-      = (IceTUByte)(255*background_color[2]);
-    ((IceTUByte *)background_color_word_p)[3]
-      = (IceTUByte)(255*background_color[3]);
+    ((IceTUByte *)&background_color_word)[0]
+        = (IceTUByte)(255*background_color[0]);
+    ((IceTUByte *)&background_color_word)[1]
+        = (IceTUByte)(255*background_color[1]);
+    ((IceTUByte *)&background_color_word)[2]
+        = (IceTUByte)(255*background_color[2]);
+    ((IceTUByte *)&background_color_word)[3]
+        = (IceTUByte)(255*background_color[3]);
+
+    icetStateSetFloatv(ICET_TRUE_BACKGROUND_COLOR, 4, background_color);
+    icetStateSetInteger(ICET_TRUE_BACKGROUND_COLOR_WORD, background_color_word);
+
     if (use_color_blending) {
         IceTInt display_tile;
       /* We need to correct the background color by zeroing it out at
@@ -188,18 +190,16 @@ static void drawUseBackgroundColor(const IceTFloat *background_color,
         icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, 0);
 
         icetGetIntegerv(ICET_TILE_DISPLAYED, &display_tile);
-        if (   (display_tile >= 0)
-            && (*background_color_word_p != 0)
+        if (   (background_color_word != 0)
             && icetIsEnabled(ICET_CORRECT_COLORED_BACKGROUND) ) {
-            *need_color_correction_p = ICET_TRUE;
+            icetStateSetBoolean(ICET_NEED_BACKGROUND_CORRECTION, ICET_TRUE);
         } else {
-            *need_color_correction_p = ICET_FALSE;
+            icetStateSetBoolean(ICET_NEED_BACKGROUND_CORRECTION, ICET_FALSE);
         }
     } else {
         icetStateSetFloatv(ICET_BACKGROUND_COLOR, 4, background_color);
-        icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD,
-                            *background_color_word_p);
-        *need_color_correction_p = ICET_FALSE;
+        icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, background_color_word);
+        icetStateSetBoolean(ICET_NEED_BACKGROUND_CORRECTION, ICET_FALSE);
     }
 }
 
@@ -728,36 +728,6 @@ static IceTImage drawInvokeStrategy(void)
     return image;
 }
 
-static void drawCorrectBackground(IceTImage image,
-                                  const IceTFloat *background_color,
-                                  IceTUInt background_color_word)
-{
-    IceTSizeType pixels = icetImageGetWidth(image)*icetImageGetHeight(image);
-    IceTEnum color_format = icetImageGetColorFormat(image);
-
-    icetTimingBlendBegin();
-
-    if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE) {
-        IceTUByte *color = icetImageGetColorub(image);
-        IceTUByte *bc = (IceTUByte *)(&background_color_word);
-        IceTSizeType p;
-        for (p = 0; p < pixels; p++, color += 4) {
-            ICET_UNDER_UBYTE(bc, color);
-        }
-    } else if (color_format == ICET_IMAGE_COLOR_RGBA_FLOAT) {
-        IceTFloat *color = icetImageGetColorf(image);
-        IceTSizeType p;
-        for (p = 0; p < pixels; p++, color += 4) {
-            ICET_UNDER_FLOAT(background_color, color);
-        }
-    } else {
-        icetRaiseError("Encountered invalid color buffer type"
-                       " with color blending.", ICET_SANITY_CHECK_FAIL);
-    }
-
-    icetTimingBlendEnd();
-}
-
 IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
                         const IceTDouble *modelview_matrix,
                         const IceTFloat *background_color)
@@ -768,8 +738,6 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     IceTDouble buf_read_time;
     IceTDouble compose_time;
     IceTDouble total_time;
-    IceTUInt background_color_word;
-    IceTBoolean need_color_correction;
 
     icetRaiseDebug("In icetDrawFrame");
 
@@ -789,9 +757,7 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     icetStateSetDoublev(ICET_PROJECTION_MATRIX, 16, projection_matrix);
     icetStateSetDoublev(ICET_MODELVIEW_MATRIX, 16, modelview_matrix);
 
-    drawUseBackgroundColor(background_color,
-                           &background_color_word,
-                           &need_color_correction);
+    drawUseBackgroundColor(background_color);
 
     icetGetIntegerv(ICET_FRAME_COUNT, &frame_count);
     frame_count++;
@@ -835,11 +801,6 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     }
 
     image = drawInvokeStrategy();
-
-    /* Correct background color where applicable. */
-    if (need_color_correction) {
-        drawCorrectBackground(image, background_color, background_color_word);
-    }
 
     /* Calculate times. */
     icetGetDoublev(ICET_RENDER_TIME, &render_time);

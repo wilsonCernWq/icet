@@ -672,7 +672,9 @@ void icetSingleImageCollect(const IceTSparseImage input_image,
 
     if (piece_size > 0) {
         /* Decompress data into appropriate offset of result image. */
-        icetDecompressSubImage(input_image, piece_offset, result_image);
+        icetDecompressSubImageCorrectBackground(input_image,
+                                                piece_offset,
+                                                result_image);
     } else if (rank != dest) {
         /* If this function is called for multiple collections, it is likely
            that the local process will not have data for all collections.  To
