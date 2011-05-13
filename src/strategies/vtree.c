@@ -228,7 +228,7 @@ IceTImage icetVtreeCompose(void)
         if (all_contained_tmasks[rank*num_tiles + tile_displayed]) {
           /* Only "this" node draws "this" tile.  Because the image never */
           /* needed to be transferred, it was never rendered above.  Just */
-          /* render it now.                                                  */
+          /* render it now.                                               */
             icetRaiseDebug("Rendering tile to display.");
           /* This may uncessarily read a buffer if not outputing an input
              buffer */
@@ -245,6 +245,10 @@ IceTImage icetVtreeCompose(void)
                                 image, display_tile_width, display_tile_height);
             icetClearImage(image);
         }
+    }
+
+    if (tile_displayed >= 0) {
+        icetImageCorrectBackground(image);
     }
 
     return image;
