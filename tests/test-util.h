@@ -45,7 +45,7 @@ void printrank(const char *fmt, ...);
 void swap_buffers(void);
 #endif
 
-void finalize_test(int result);
+void finalize_test(IceTInt result);
 
 void write_ppm(const char *filename,
                const IceTUByte *image,
