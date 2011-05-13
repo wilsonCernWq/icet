@@ -14,6 +14,8 @@
 #include <IceTGL.h>
 #endif
 
+#include <IceTDevCommunication.h>
+
 #ifndef __USE_POSIX
 #define __USE_POSIX
 #endif
