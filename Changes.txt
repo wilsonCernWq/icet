@@ -1,29 +1,3 @@
-Describe radix-k algorithm.
-
-ietAddTile raises ICET_INVALID_VALUE if you try to create a tile with no
-pixels.
-
-icetFindRankInGroup, icetFindMyRankInGroup
-
-The following state variables are not set with sequential strategy:
-ICET_ALL_CONTAINED_TILES_MASKS, ICET_TILE_CONTRIB_COUNTS, and
-ICET_TOTAL_IMAGE_COUNT.
-
-Suggest using sequential strategy for single tile (because it skips some
-allgathers).
-
-icetCommBarrier
-
-icetImageAssignBuffer, icetSingleImageAssignBuffer
-
-icetWaitany returns index to finished request - different than MPI.
-
-icetCommGather, icetCommGatherV
-
-ICET_IN_PLACE_COLLECT
-
-ICET_SIZE_TYPE (list of types in implement new strategy -> Communications).
-
 const array for compose_group in single image strategy functions.
 
 icetSingleImageCompose interface change.
@@ -51,8 +25,6 @@ icetRenderTransferSparseImages
 icetSparseImageNull, icetSparseImageIsNull
 
 icetUnsafeStateGet* now return const
-
-todo: correct background before gather
 
 ICET_INTERLACE_IMAGES
 
@@ -101,9 +73,6 @@ All the matrix math helpers icetMatrix* in IceTDevMatrix.h
 
 Const versions of icetImageGetColor* and icetImageGetDepth* functions.
 
-Added Alltoall to communicator.  (Search for Allgather for places to add in
-documentation.)
-
 icetSendRecvLargeMessages takes const array for messageDestinations.
 
 ICET_CORRECT_COLORED_BACKGROUND is now the responsibility of the strategy,
@@ -115,3 +84,8 @@ ICET_TRUE_BACKGROUND_COLOR, and ICET_TRUE_BACKGROUND_COLOR_WORD.
 icetImageCorrectBackground, icetClearImageTrueBackground,
 icetDecompressImageCorrectBackground, and
 icetDecompressSubImageCorrectBackground functions.
+
+Future work: update scalability tests done.
+Future work: multithreaded.
+Future work: lean memory.
+Future work: big image strategy.
