@@ -590,7 +590,7 @@ void icetSendRecvLargeMessages(IceTInt numMessagesSending,
                         bufferSize);
 }
 
-void icetSingleImageCompose(IceTInt *compose_group,
+void icetSingleImageCompose(const IceTInt *compose_group,
                             IceTInt group_size,
                             IceTInt image_dest,
                             IceTSparseImage input_image,

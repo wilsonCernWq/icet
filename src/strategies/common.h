@@ -160,7 +160,7 @@ void icetSendRecvLargeMessages(IceTInt numMessagesSending,
    piece_offset - The offset to the start of the valid pixels will be placed
         in this argument.
 */
-void icetSingleImageCompose(IceTInt *compose_group,
+void icetSingleImageCompose(const IceTInt *compose_group,
                             IceTInt group_size,
                             IceTInt image_dest,
                             IceTSparseImage input_image,
@@ -173,10 +173,10 @@ void icetSingleImageCompose(IceTInt *compose_group,
    call this function after a call to icetSingleImageCompose to complete the
    image composition.  Unlike icetSingleImageCompose, however, this function
    must be called on all processes, not just those in a group.  Processes that
-   have no piece of the image should pass 0 for both piece_offset and
-   piece_size.
+   have no piece of the image should pass 0 for piece_offset and a null or other
+   zero-size image for input_image.
 
-   input_image - Contains the image composited image partition returned from
+   input_image - Contains the composited image partition returned from
         icetSingleImageCompose.
    dest - The rank of the process to where the image should be collected.  Be
         aware that this is generally a different value than the image_dest

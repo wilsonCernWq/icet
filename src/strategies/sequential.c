@@ -125,9 +125,9 @@ IceTImage icetSequentialCompose(void)
                 my_image = icetGetStateBufferImage(
                                                   SEQUENTIAL_FINAL_IMAGE_BUFFER,
                                                   tile_width, tile_height);
-                icetDecompressSubImage(composited_image,
-                                       piece_offset,
-                                       my_image);
+                icetDecompressSubImageCorrectBackground(composited_image,
+                                                        piece_offset,
+                                                        my_image);
                 icetStateSetInteger(ICET_VALID_PIXELS_TILE, i);
                 icetStateSetInteger(ICET_VALID_PIXELS_OFFSET, piece_offset);
                 icetStateSetInteger(ICET_VALID_PIXELS_NUM, piece_size);

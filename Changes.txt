@@ -1,11 +1,3 @@
-const array for compose_group in single image strategy functions.
-
-icetSingleImageCompose interface change.
-
-icetSingleImageCollect.
-
-General change to single image strategy functions.
-
 ICET_MAGIC_K state variable, CMake variable, and environment variable.
 
 icetCompressedCompressedComposite
