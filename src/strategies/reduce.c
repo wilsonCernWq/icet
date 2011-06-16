@@ -102,7 +102,10 @@ IceTImage icetReduceCompose(void)
                                &composited_image,
                                &piece_offset);
     } else {
-      /* Not assigned to compose any tile.  Do nothing. */
+        /* Not assigned to compose any tile.  Do nothing.  These variables set
+           for safety. */
+        composited_image = icetSparseImageNull();
+        piece_offset = 0;
     }
 
     if (icetIsEnabled(ICET_COLLECT_IMAGES)) {
