@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Thu Sep 23 08:15:13 MDT 2010
+.\" Manual page created with latex2man on Tue Jul 19 13:11:54 MDT 2011
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetEnable" "3" "September 20, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetEnable" "3" "July 11, 2011" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetEnable\fP,\fBicetDisable\fP\-\- enable/disable an \fBIceT \fPfeature. 
@@ -39,6 +39,23 @@ be turned on or off. Valid values for \fIpname\fP
 are: 
 .PP
 .TP
+\fBICET_COLLECT_IMAGES\fP
+ When this option is on (the default) 
+images partitions are always collected to display processes. When this 
+option is turned off, the strategy has the option of leaving images 
+partitioned among processes. Each process containing part of a tile\&'s 
+image will return the entire buffer from \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP
+in an \fBIceTImage\fP
+object. However, only 
+certain pixels will be valid. The state variables 
+\fBICET_VALID_PIXELS_TILE\fP,
+\fBICET_VALID_PIXELS_OFFSET\fP,
+and \fBICET_VALID_PIXELS_NUM\fP
+give which tile the pixels belong 
+to and what range of pixels are valid. 
+.TP
 \fBICET_COMPOSITE_ONE_BUFFER\fP
  Turn this option on when 
 performing z\-buffer compositing of a color image and the only result 
@@ -59,6 +76,11 @@ flag is disabled by default.
 be shifted such that the geometry will be rendered in one shot whenever 
 possible, even if the geometry straddles up to four tiles. This flag 
 is enabled by default. 
+.TP
+\fBICET_INTERLACE_IMAGES\fP
+ If enabled, pixels in images 
+(might be) shuffled to better load balance the compositing work. This 
+flag is enabled by default. 
 .TP
 \fBICET_ORDERED_COMPOSITE\fP
  If enabled, the image composition 

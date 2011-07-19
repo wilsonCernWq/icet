@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Thu Sep 23 08:15:12 MDT 2010
+.\" Manual page created with latex2man on Tue Jul 19 13:11:53 MDT 2011
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetAddTile" "3" "August 10, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetAddTile" "3" "June  7, 2011" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetAddTile \-\- add a tile to the logical display.\fP
@@ -86,10 +86,13 @@ created.
 .TP
 \fBICET_INVALID_VALUE\fP
  Raised if \fIdisplay_rank\fP
-is not a valid process rank or 
-\fIdisplay_rank\fP
-is already assigned to another tile. If this 
-error is raised, nothing is done and \-1 is returned. 
+is not a valid process rank, if \fIdisplay_rank\fP
+is already 
+assigned to another tile, or if \fIwidth\fP
+or \fIheight\fP
+is 
+smaller than 1. If this error is raised, nothing is done and \-1 is 
+returned. 
 .PP
 .SH Warnings
 

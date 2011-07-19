@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Thu Sep 23 08:15:13 MDT 2010
+.\" Manual page created with latex2man on Tue Jul 19 13:11:54 MDT 2011
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetGet" "3" "September 20, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetGet" "3" "July 11, 2011" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetGet \-\- get an \fBIceT \fPstate parameter\fP
@@ -132,7 +132,14 @@ Stored as a double.
 calling process for transferring image data during the last call to 
 \fBicetDrawFrame\fP
 or \fBicetGLDrawFrame\fP\&.
-Stored as an integer. 
+Stored as an 
+integer. 
+.TP
+\fBICET_COLLECT_TIME\fP
+ The total time spent in collecting 
+image fragments to display processes during the last call to 
+\fBicetDrawFrame\fP
+or \fBicetGLDrawFrame\fP\&.
 .TP
 \fBICET_COLOR_FORMAT\fP
  The color format of images to be 
@@ -256,6 +263,14 @@ is given as the integer four\-tuple $<x, y, width, height
 of all the tiles, and width and height are just big enough for the 
 viewport to cover all tiles. 
 .TP
+\fBICET_MAGIC_K\fP
+ The target k value used when compositing 
+with the radix\-k single image strategy. 
+.TP
+\fBICET_MAX_IMAGE_SPLIT\fP
+ The target number of maximum image 
+splits to be performed by compositing strategies. 
+.TP
 \fBICET_NUM_BOUNDING_VERTS\fP
  The number of bounding vertices 
 listed in the \fBICET_GEOMETRY_BOUNDS\fP
@@ -364,7 +379,82 @@ viewports are listed in the same order as the tiles were defined with
  Time spent in the last call to 
 \fBicetDrawFrame\fP
 or \fBicetGLDrawFrame\fP\&.
-Stored as a double. 
+This includes all 
+the time to render, read back, compress, and composite images. Stored 
+as a double. 
+.TP
+\fBICET_VALID_PIXELS_NUM\fP
+ In conjunction with 
+\fBICET_VALID_PIXELS_OFFSET\fP,
+gives the range of valid pixels 
+for the last image returned from \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP\&.
+Given the arrays of pixels returned with the 
+\fBicetImageGetColor\fP
+and \fBicetImageGetDepth\fP
+functions, the 
+valid pixels start at the pixel indexed by 
+\fBICET_VALID_PIXELS_OFFSET\fP
+and continue for 
+\fBICET_VALID_PIXELS_NUM\fP\&.
+The tile to which these pixels 
+belong are captured in the \fBICET_VALID_PIXELS_TILE\fP
+state 
+variable. If the last call to \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP
+did not return pixels for the local process, 
+\fBICET_VALID_PIXELS_NUM\fP
+is set to 0\&. This state variable is 
+only useful when \fBICET_COLLECT_IMAGES\fP
+is off. If on, it can 
+be assumed that all display processes contain all pixels in the image 
+(\fBICET_VALID_PIXELS_NUM\fP
+is the number of pixels in the 
+image), and all other processes have no pixel data. 
+.TP
+\fBICET_VALID_PIXELS_OFFSET\fP
+ In conjunction with 
+\fBICET_VALID_PIXELS_NUM\fP,
+gives the range of valid pixels for 
+the last image returned from \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP\&.
+Given the arrays of pixels returned with the 
+\fBicetImageGetColor\fP
+and \fBicetImageGetDepth\fP
+functions, the 
+valid pixels start at the pixel indexed by 
+\fBICET_VALID_PIXELS_OFFSET\fP
+and continue for 
+\fBICET_VALID_PIXELS_NUM\fP\&.
+The tile to which these pixels 
+belong are captured in the \fBICET_VALID_PIXELS_TILE\fP
+state 
+variable. This state variable is only useful when 
+\fBICET_COLLECT_IMAGES\fP
+is off. If on, it can be assumed that 
+all display processes contain all pixels in the image 
+(\fBICET_VALID_PIXELS_OFFSET\fP
+is 0), and all other processes 
+have no pixel data. 
+.TP
+\fBICET_VALID_PIXELS_TILE\fP
+ Gives the tile for which the 
+last image returned from \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP
+contains pixels. Each process has its own 
+value. If the last call to \fBicetDrawFrame\fP
+or 
+\fBicetGLDrawFrame\fP
+did not return pixels for the local process, 
+then this state variable is set to \-1\&. This state variable is only 
+useful when \fBICET_COLLECT_IMAGES\fP
+is off. If on, it can be 
+assumed that all display processes have valid pixels for their 
+respective display tiles, and all other processes have no pixel data. 
 .PP
 In addition, if you are using the \fbOpenGL \fPlayer (i.e., have called 
 \fBicetGLInitialize\fP),

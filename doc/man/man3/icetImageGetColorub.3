@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Thu Sep 23 08:15:13 MDT 2010
+.\" Manual page created with latex2man on Tue Jul 19 13:11:55 MDT 2011
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetImageGetColor" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetImageGetColor" "3" "November 18, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetImageGetColor , \fBicetImageGetDepth\fP\-\- retrieve pixel data buffer from image\fP
@@ -29,6 +29,18 @@ IceTUByte *	\fBicetImageGetColorub\fP	(  \fBIceTImage\fP	\fIimage\fP  );
 IceTUInt *	\fBicetImageGetColorui\fP	(  \fBIceTImage\fP	\fIimage\fP  );
 IceTFloat *	\fBicetImageGetColorf\fP	(  \fBIceTImage\fP	\fIimage\fP  );
 IceTFloat *	\fBicetImageGetDepthf\fP	(  \fBIceTImage\fP	\fIimage\fP  );
+.TE
+.PP
+.TS H
+l l l l .
+const IceTUByte *	\fBicetImageGetColorcub\fP	(
+  const \fBIceTImage\fP	\fIimage\fP  );
+const IceTUInt *	\fBicetImageGetColorcui\fP	(
+  const \fBIceTImage\fP	\fIimage\fP  );
+const IceTFloat *	\fBicetImageGetColorcf\fP	(
+  const \fBIceTImage\fP	\fIimage\fP  );
+const IceTFloat *	\fBicetImageGetDepthcf\fP	(
+  const \fBIceTImage\fP	\fIimage\fP  );
 .TE
 .PP
 .SH Description
