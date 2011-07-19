@@ -1,5 +1,0 @@
-Future work: update scalability tests done.
-Future work: multithreaded.
-Future work: lean memory.
-Future work: big image strategy.
-Future work: expose matrix functions?
