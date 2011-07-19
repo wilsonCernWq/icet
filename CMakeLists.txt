@@ -211,10 +211,10 @@ INCLUDE_DIRECTORIES(${ICET_BINARY_DIR}/src/include)
 
 # When creating one of the IceT libraries, we want special instructions
 # for building and installing.
-SET(ICET_INSTALL_TARGETS "" CACHE STRING "" FORCE)
+SET(ICET_INSTALL_TARGETS "" CACHE INTERNAL "" FORCE)
 MACRO(ICET_ADD_LIBRARY library_name)
   SET(ICET_INSTALL_TARGETS ${ICET_INSTALL_TARGETS} ${library_name}
-    CACHE STRING "" FORCE
+    CACHE INTERNAL "" FORCE
     )
   SET(icet_library_sources ${ARGN})
   ADD_LIBRARY(${library_name} ${icet_library_sources})
