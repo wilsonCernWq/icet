@@ -5,8 +5,16 @@
 ## This source code is released under the New BSD License.
 #
 
-PROJECT(ICET C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+# Turn off policy 0017, which makes modules packaged with CMake find
+# any module rather than just others packaged with CMake.  This is
+# necessary for backward compatibility when included from ParaView.
+IF (POLICY CMP0017)
+  CMAKE_POLICY(SET CMP0017 OLD)
+ENDIF (POLICY CMP0017)
+
+PROJECT(ICET C)
 
 # Set the current IceT version.
 SET(ICET_MAJOR_VERSION 2)
