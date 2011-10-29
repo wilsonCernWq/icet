@@ -163,7 +163,7 @@ static int compare_color_buffers(IceTSizeType local_width,
     free(cb);
 
     return 1;
-        
+
 }
 
 static int compare_depth_buffers(IceTSizeType local_width,
@@ -378,7 +378,7 @@ static void RandomTransformTryStrategy()
     if (viewport_width < SCREEN_HEIGHT) {
         viewport_offset_y = rand()%(SCREEN_HEIGHT-viewport_height);
     }
-            
+
     glViewport((GLint)viewport_offset_x, (GLint)viewport_offset_y,
                (GLsizei)viewport_width, (GLsizei)viewport_height);
     /* glViewport(0, 0, local_width, local_height); */
@@ -515,7 +515,7 @@ static int RandomTransformRun()
     glLoadIdentity();
     glTranslatef(2.0f*rand()/RAND_MAX - 1.0f,
                  2.0f*rand()/RAND_MAX - 1.0f,
-                 2.0f*rand()/RAND_MAX - 1.0f);
+                 ((rand()%19998) - 9999) * 0.0001f);
     glRotatef(360.0f*rand()/RAND_MAX, 0.0f, 0.0f,
               (float)rand()/RAND_MAX);
     glScalef((float)(1.0/sqrt(num_proc) - 1.0)*(float)rand()/RAND_MAX + 1.0f,
