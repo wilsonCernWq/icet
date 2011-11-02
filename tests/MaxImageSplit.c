@@ -254,7 +254,7 @@ static int MaxImageSplitTryMax()
 
 #ifdef _WIN32
         sprintf(image_split_string, "ICET_MAX_IMAGE_SPLIT=%d", max_image_split);
-        putenv(env_string);
+        putenv(image_split_string);
 #else
         sprintf(image_split_string, "%d", max_image_split);
         setenv("ICET_MAX_IMAGE_SPLIT", image_split_string, ICET_TRUE);
