@@ -946,10 +946,16 @@ int SimpleTimingRun()
         IceTContext original_context = icetGetContext();
         IceTInt magic_k;
         for (magic_k = 2; magic_k <= g_max_magic_k; magic_k *= 2) {
-            char k_string[32];
+            char k_string[64];
             int retval;
+
+#ifdef _WIN32
+            sprintf(k_string, "ICET_MAGIC_K=%d", magic_k);
+            putenv(k_string);
+#else
             sprintf(k_string, "%d", magic_k);
             setenv("ICET_MAGIC_K", k_string, ICET_TRUE);
+#endif
 
             /* This is a bit hackish.  The magic k value is set when the IceT
                context is initialized.  Thus, for the environment to take
@@ -982,10 +988,16 @@ int SimpleTimingRun()
         for (image_split = g_min_image_split;
              image_split/magic_k < num_proc;
              image_split *= magic_k) {
-            char image_split_string[32];
+            char image_split_string[64];
             int retval;
+
+#ifdef _WIN32
+            sprintf(image_split_string, "ICET_MAX_IMAGE_SPLIT=%d", image_split);
+            putenv(image_split_string);
+#else
             sprintf(image_split_string, "%d", image_split);
             setenv("ICET_MAX_IMAGE_SPLIT", image_split_string, ICET_TRUE);
+#endif
 
             /* This is a bit hackish.  The max image split value is set when the
                IceT context is initialized.  Thus, for the environment to take
