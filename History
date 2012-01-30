@@ -28,7 +28,7 @@ Revision 2.1:
 	 better load balance the active pixels during compositing.
 
 	 Patch 1: Fixed compatibility issue with compiling against MPI
-	 version 1.
+	 version 1.  Fixed build issues for Windows.
 
 Revision 2.0: A major restructuring of the IceT code comprising the
 	following changes:
