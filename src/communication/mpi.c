@@ -11,6 +11,8 @@
 
 #include <IceTDevCommunication.h>
 #include <IceTDevDiagnostics.h>
+#include <IceTDevPorting.h>
+#include <IceTDevState.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +21,13 @@
 #define BREAK_ON_MPI_ERROR
 #endif
 
+#if MPI_VERSION >= 2
+#define ICET_USE_MPI_IN_PLACE
+#endif
+
 #define ICET_MPI_REQUEST_MAGIC_NUMBER ((IceTEnum)0xD7168B00)
+
+#define ICET_MPI_TEMP_BUFFER_0  (ICET_COMMUNICATION_LAYER_START | (IceTEnum)0x00)
 
 static IceTCommunicator Duplicate(IceTCommunicator self);
 static void Destroy(IceTCommunicator self);
@@ -324,7 +332,17 @@ static void Gather(IceTCommunicator self,
     CONVERT_DATATYPE(datatype, mpitype);
 
     if (sendbuf == ICET_IN_PLACE_COLLECT) {
+#ifdef ICET_USE_MPI_IN_PLACE
         sendbuf = MPI_IN_PLACE;
+#else
+        int rank;
+        MPI_Comm_rank(MPI_COMM, &rank);
+        sendbuf = icetGetStateBuffer(ICET_MPI_TEMP_BUFFER_0,
+                                     sendcount*icetTypeWidth(datatype));
+        memcpy((void *)sendbuf,
+               ((const IceTByte *)recvbuf) + rank*sendcount,
+               sendcount);
+#endif
     }
 
     MPI_Gather((void *)sendbuf, sendcount, mpitype,
@@ -345,7 +363,18 @@ static void Gatherv(IceTCommunicator self,
     CONVERT_DATATYPE(datatype, mpitype);
 
     if (sendbuf == ICET_IN_PLACE_COLLECT) {
+#ifdef ICET_USE_MPI_IN_PLACE
         sendbuf = MPI_IN_PLACE;
+#else
+        int rank;
+        MPI_Comm_rank(MPI_COMM, &rank);
+        sendcount = recvcounts[rank];
+        sendbuf = icetGetStateBuffer(ICET_MPI_TEMP_BUFFER_0,
+                                     sendcount*icetTypeWidth(datatype));
+        memcpy((void *)sendbuf,
+               ((const IceTByte *)recvbuf) + recvoffsets[rank],
+               sendcount);
+#endif
     }
 
     MPI_Gatherv((void *)sendbuf, sendcount, mpitype,
@@ -363,7 +392,17 @@ static void Allgather(IceTCommunicator self,
     CONVERT_DATATYPE(datatype, mpitype);
 
     if (sendbuf == ICET_IN_PLACE_COLLECT) {
+#ifdef ICET_USE_MPI_IN_PLACE
         sendbuf = MPI_IN_PLACE;
+#else
+        int rank;
+        MPI_Comm_rank(MPI_COMM, &rank);
+        sendbuf = icetGetStateBuffer(ICET_MPI_TEMP_BUFFER_0,
+                                     sendcount*icetTypeWidth(datatype));
+        memcpy((void *)sendbuf,
+               ((const IceTByte *)recvbuf) + rank*sendcount,
+               sendcount);
+#endif
     }
 
     MPI_Allgather((void *)sendbuf, sendcount, mpitype,

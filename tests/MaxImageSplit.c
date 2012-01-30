@@ -247,13 +247,18 @@ static int MaxImageSplitTryMax()
     for (max_image_split = 1;
          max_image_split/2 < num_proc;
          max_image_split *= 2) {
-        char image_split_string[32];
+        char image_split_string[64];
         IceTInt reported_image_split;
 
         printstat("Trying max image split of %d\n", max_image_split);
 
+#ifdef _WIN32
+        sprintf(image_split_string, "ICET_MAX_IMAGE_SPLIT=%d", max_image_split);
+        putenv(image_split_string);
+#else
         sprintf(image_split_string, "%d", max_image_split);
         setenv("ICET_MAX_IMAGE_SPLIT", image_split_string, ICET_TRUE);
+#endif
 
         /* This is a bit hackish.  The max image split value is set when the
            IceT context is initialized.  Thus, for the environment to take

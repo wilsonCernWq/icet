@@ -85,7 +85,7 @@ struct IceTCommunicatorStruct {
                     const void *sendbuf,
                     int sendcount,
                     IceTEnum datatype,
-                    void *recvbuf, 
+                    void *recvbuf,
                     const int *recvcounts,
                     const int *recvoffsets,
                     int root);
@@ -414,6 +414,9 @@ ICET_EXPORT void icetDiagnostics(IceTBitField mask);
 #define ICET_SI_STRATEGY_BUFFER_13 (ICET_SI_STRATEGY_BUFFER_START | (IceTEnum)0x000D)
 #define ICET_SI_STRATEGY_BUFFER_14 (ICET_SI_STRATEGY_BUFFER_START | (IceTEnum)0x000E)
 #define ICET_SI_STRATEGY_BUFFER_15 (ICET_SI_STRATEGY_BUFFER_START | (IceTEnum)0x000F)
+
+#define ICET_COMMUNICATION_LAYER_START (ICET_STATE_BUFFER_START | (IceTEnum)0x0040)
+#define ICET_COMMUNICATION_LAYER_END  (ICET_STATE_BUFFER_START | (IceTEnum)0x0050)
 
 #define ICET_STATE_SIZE         (IceTEnum)0x00000200
 #define ICET_STATE_ENGINE_END   (ICET_STATE_ENGINE_START + ICET_STATE_SIZE)
