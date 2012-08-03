@@ -209,6 +209,10 @@ ENDIF(NOT ICET_INSTALL_MAN_DIR)
 IF(NOT ICET_INSTALL_EXPORT_NAME)
   SET(ICET_INSTALL_EXPORT_NAME IceTTargets)
 ENDIF()
+IF(NOT ICET_EXPORTS_FILE)
+  SET(ICET_EXPORTS_FILE ${ICET_LIBRARY_DIR}/IceTTargets.cmake)
+  FILE(REMOVE "${ICET_EXPORTS_FILE}")
+ENDIF()
 
 # Shared libraries are considered both runtime and development and
 # static libraries are considered development only.  In order to
@@ -276,8 +280,7 @@ ADD_SUBDIRECTORY(doc)
 
 # Save the CMake targets so another project can import them.
 EXPORT(TARGETS ${ICET_INSTALL_TARGETS}
-  FILE ${ICET_LIBRARY_DIR}/IceTTargets.cmake
-  )
+  APPEND FILE ${ICET_EXPORTS_FILE})
 
 # Save IceT specific configuration options.
 
