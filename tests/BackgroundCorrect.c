@@ -26,9 +26,9 @@
 #define PROC_REGION_WIDTH       10
 #define PROC_REGION_HEIGHT      10
 
-const IceTFloat g_background_color[4] = { 0.5, 0.5, 0.5, 1.0 };
-const IceTFloat g_foreground_color[4] = { 0.0, 0.25, 0.5, 0.5 };
-const IceTFloat g_blended_color[4] = { 0.25, 0.5, 0.75, 1.0 };
+static const IceTFloat g_background_color[4] = { 0.5, 0.5, 0.5, 1.0 };
+static const IceTFloat g_foreground_color[4] = { 0.0, 0.25, 0.5, 0.5 };
+static const IceTFloat g_blended_color[4] = { 0.25, 0.5, 0.75, 1.0 };
 
 static IceTBoolean ColorsEqual(const IceTFloat *color1, const IceTFloat *color2)
 {
