@@ -183,7 +183,7 @@ static int MaxImageSplitCheckImage(const IceTImage image)
             IceTInt x, y;
             for (y = 0; y < PROC_REGION_HEIGHT; y++) {
                 for (x = 0; x < PROC_REGION_WIDTH; x++) {
-                    if (*pixel != proc) {
+                    if (*pixel != (IceTUInt)proc) {
                         printrank("**** Found bad pixel!!!! ****\n");
                         printrank("Region for process %d, x = %d, y = %d\n",
                                   proc, x, y);
