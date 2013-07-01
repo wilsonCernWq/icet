@@ -284,7 +284,9 @@ IceTImage icetSplitCompose(void)
     tile_groups[num_tiles] = num_proc;
 
   /* Figure out which tile I am assigned to. */
-    for (my_tile = 0; rank >= tile_groups[my_tile+1]; my_tile++);
+    for (my_tile = 0; rank >= tile_groups[my_tile+1]; my_tile++) {
+      /* Nothing to do.  Just drop out of loop when my_tile is correct. */
+    }
     icetRaiseDebug1("My tile is %d", my_tile);
 
     group_size = tile_groups[my_tile+1] - tile_groups[my_tile];
