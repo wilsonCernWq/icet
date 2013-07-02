@@ -2340,10 +2340,10 @@ static IceTImage renderTile(int tile,
         || (contained_viewport[1] > tile_viewport[1] + tile_viewport[3]) ) {
       /* Case 0: geometry completely outside tile. */
         icetRaiseDebug("Case 0: geometry completely outside tile.");
-        screen_viewport[0] = target_viewport[0] = 0;
-        screen_viewport[1] = target_viewport[1] = 0;
-        screen_viewport[2] = target_viewport[2] = 0;
-        screen_viewport[3] = target_viewport[3] = 0;
+        readback_viewport[0] = screen_viewport[0] = target_viewport[0] = 0;
+        readback_viewport[1] = screen_viewport[1] = target_viewport[1] = 0;
+        readback_viewport[2] = screen_viewport[2] = target_viewport[2] = 0;
+        readback_viewport[3] = screen_viewport[3] = target_viewport[3] = 0;
         if (!icetIsEnabled(ICET_RENDER_EMPTY_IMAGES)) {
           /* Don't bother to render. */
             return tile_buffer;
