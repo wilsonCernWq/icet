@@ -24,6 +24,7 @@ SET(MyTests
   OddImageSizes.c
   OddProcessCounts.c
   RadixkUnitTests.c
+  RenderEmpty.c
   SimpleTiming.c
   SparseImageCopy.c
   )

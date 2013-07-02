@@ -194,6 +194,7 @@ void icetStateSetDefaults(void)
     icetEnable(ICET_COMPOSITE_ONE_BUFFER);
     icetEnable(ICET_INTERLACE_IMAGES);
     icetEnable(ICET_COLLECT_IMAGES);
+    icetDisable(ICET_RENDER_EMPTY_IMAGES);
 
     icetStateSetBoolean(ICET_IS_DRAWING_FRAME, 0);
     icetStateSetBoolean(ICET_RENDER_BUFFER_SIZE, 0);
@@ -612,9 +613,9 @@ static void *icetUnsafeStateGet(IceTEnum pname, IceTEnum type)
     stateCheck(pname, icetGetState());
 
     if (icetGetState()[pname].type != type) {
-	icetRaiseError("Mismatched types in unsafe state get.",
-		       ICET_SANITY_CHECK_FAIL);
-	return NULL;
+        icetRaiseError("Mismatched types in unsafe state get.",
+                       ICET_SANITY_CHECK_FAIL);
+        return NULL;
     }
     return icetGetState()[pname].data;
 }

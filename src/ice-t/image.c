@@ -140,7 +140,7 @@ static void icetSparseImageSetActualSize(IceTSparseImage image,
  *     to the last run length.  This parameter is optional.  If set to NULL,
  *     it is assumed that out_data_p will initially point to a run length.
  *     This parameter is ignored if out_data_p is NULL.
- */   
+ */
 static void icetSparseImageScanPixels(const IceTVoid **in_data_p,
                                       IceTSizeType *inactive_before_p,
                                       IceTSizeType *active_till_next_runl_p,
@@ -693,7 +693,7 @@ IceTFloat *icetImageGetColorf(IceTImage image)
 {
     const IceTFloat *const_buffer = icetImageGetColorcf(image);
 
-    
+
     /* This const cast is OK because we actually got the pointer from a
        non-const image. */
     return (IceTFloat *)const_buffer;
@@ -725,7 +725,7 @@ IceTVoid *icetImageGetDepthVoid(IceTImage image, IceTSizeType *pixel_size)
 
     /* This const cast is OK because we actually got the pointer from a
        non-const image. */
-    return (IceTVoid *)const_buffer;  
+    return (IceTVoid *)const_buffer;
 }
 const IceTFloat *icetImageGetDepthcf(const IceTImage image)
 {
@@ -743,7 +743,7 @@ IceTFloat *icetImageGetDepthf(IceTImage image)
 {
     const IceTFloat *const_buffer = icetImageGetDepthcf(image);
 
-    
+
     /* This const cast is OK because we actually got the pointer from a
        non-const image. */
     return (IceTFloat *)const_buffer;
@@ -1261,7 +1261,7 @@ static void icetSparseImageScanPixels(const IceTVoid **in_data_p,
         out_data += RUN_LENGTH_SIZE;                    \
         INACTIVE_RUN_LENGTH(last_out_run_length) = 0;   \
         ACTIVE_RUN_LENGTH(last_out_run_length) = 0;     \
-    }        
+    }
 
     if (out_data_p != NULL) {
         out_data = *out_data_p;
@@ -2340,12 +2340,14 @@ static IceTImage renderTile(int tile,
         || (contained_viewport[1] > tile_viewport[1] + tile_viewport[3]) ) {
       /* Case 0: geometry completely outside tile. */
         icetRaiseDebug("Case 0: geometry completely outside tile.");
-        screen_viewport[0] = target_viewport[0] = 0;
-        screen_viewport[1] = target_viewport[1] = 0;
-        screen_viewport[2] = target_viewport[2] = 0;
-        screen_viewport[3] = target_viewport[3] = 0;
-      /* Don't bother to render. */
-        return tile_buffer;
+        readback_viewport[0] = screen_viewport[0] = target_viewport[0] = 0;
+        readback_viewport[1] = screen_viewport[1] = target_viewport[1] = 0;
+        readback_viewport[2] = screen_viewport[2] = target_viewport[2] = 0;
+        readback_viewport[3] = screen_viewport[3] = target_viewport[3] = 0;
+        if (!icetIsEnabled(ICET_RENDER_EMPTY_IMAGES)) {
+          /* Don't bother to render. */
+            return tile_buffer;
+        }
 #if 1
     } else if (   (contained_viewport[0] >= tile_viewport[0])
                && (contained_viewport[1] >= tile_viewport[1])
@@ -2536,7 +2538,7 @@ static IceTImage getRenderBuffer(void)
         IceTVoid *buffer;
         icetRaiseDebug("Last render should still be good.");
         icetGetPointerv(ICET_RENDER_BUFFER_HOLD, &buffer);
-        return icetImageUnpackageFromReceive(buffer);       
+        return icetImageUnpackageFromReceive(buffer);
     } else {
         IceTInt dim[2];
         IceTImage image;
