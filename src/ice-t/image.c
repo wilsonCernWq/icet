@@ -2347,6 +2347,9 @@ static IceTImage renderTile(int tile,
         if (!icetIsEnabled(ICET_RENDER_EMPTY_IMAGES)) {
           /* Don't bother to render. */
             return tile_buffer;
+        } else {
+          /* Give renderer right projection even if we ignore the result. */
+            icetProjectTile(tile, projection_matrix);
         }
 #if 1
     } else if (   (contained_viewport[0] >= tile_viewport[0])

@@ -23,7 +23,8 @@
 static const IceTFloat g_background_color[4] = { 0.5, 0.5, 0.5, 1.0 };
 static const IceTFloat g_foreground_color[4] = { 0.0, 0.25, 0.5, 1.0 };
 
-IceTFloat g_render_callback_invoked;
+IceTBoolean g_render_callback_invoked;
+IceTBoolean g_render_callback_parameters_correct;
 
 static IceTBoolean ColorsEqual(const IceTFloat *color1, const IceTFloat *color2)
 {
@@ -43,11 +44,6 @@ static void RenderEmptyDraw(const IceTDouble *projection_matrix,
                             const IceTInt *readback_viewport,
                             IceTImage result)
 {
-    /* Shut up compiler. */
-    (void)projection_matrix;
-    (void)modelview_matrix;
-    (void)background_color;
-
     IceTSizeType width;
     IceTSizeType height;
     IceTFloat *colors;
@@ -70,12 +66,54 @@ static void RenderEmptyDraw(const IceTDouble *projection_matrix,
         }
     }
 
-    /* Check to make sure that readback_viewport is actually empty. If it is *
-    not, we can expect an error later when we check the image, but put * a
-    warning here to help diagnose where the problem is. */
+    g_render_callback_parameters_correct = ICET_TRUE;
+
+    /* Check to make sure that readback_viewport is actually empty. If it is
+     * not, we can expect an error later when we check the image, but put a
+     * warning here to help diagnose where the problem is. */
+
     if ((readback_viewport[2] != 0) || (readback_viewport[3] != 0)) {
         printrank("Got a readback_viewport with a positive dimension: %dx%d\n",
                   readback_viewport[2], readback_viewport[3]);
+        g_render_callback_parameters_correct = ICET_FALSE;
+    }
+
+    /* Even though IceT should ignore anything in the render, it should still
+     * pass valid rendering parameters. Check them now. */
+    if ( (background_color[0] != 0.0f)
+         || (background_color[1] != 0.0f)
+         || (background_color[2] != 0.0f)
+         || (background_color[3] != 0.0f)) {
+        printrank("Got a bad background color %f %f %f %f.\n",
+                  background_color[0],
+                  background_color[1],
+                  background_color[2],
+                  background_color[3]);
+        g_render_callback_parameters_correct = ICET_FALSE;
+    }
+    {
+        int column_index;
+        for (column_index = 0; column_index < 4; column_index++) {
+            int row_index;
+            for (row_index = 0; row_index < 4; row_index++) {
+                IceTDouble projection_value =
+                        ICET_MATRIX(projection_matrix, row_index, column_index);
+                IceTDouble modelview_value =
+                        ICET_MATRIX(modelview_matrix, row_index, column_index);
+                IceTDouble expected_value =
+                        (row_index == column_index) ? 1.0 : 0.0;
+                if (projection_value != expected_value) {
+                    printrank("Got bad projection matrix, "
+                              "row=%d, column=%d, value=%lf\n",
+                              row_index, column_index, projection_value);
+                }
+                if (modelview_value != expected_value) {
+                    printrank("Got bad modelview matrix, "
+                              "row=%d, column=%d, value=%lf\n",
+                              row_index, column_index, modelview_value);
+                }
+            }
+        }
     }
 }
 
@@ -165,9 +203,10 @@ static int RenderEmptyTryOptions()
               "Should NOT be in draw callback.\n");
     icetDisable(ICET_RENDER_EMPTY_IMAGES);
     g_render_callback_invoked = ICET_FALSE;
+    g_render_callback_parameters_correct = ICET_FALSE;
     result += RenderEmptyTryRender();
     if (g_render_callback_invoked) {
-        printrank("**** The draw callback was called ****");
+        printrank("**** The draw callback was called ****\n");
         result = TEST_FAILED;
     }
 
@@ -176,9 +215,14 @@ static int RenderEmptyTryOptions()
               "Draw callback should be invoked everywhere.\n");
     icetEnable(ICET_RENDER_EMPTY_IMAGES);
     g_render_callback_invoked = ICET_FALSE;
+    g_render_callback_parameters_correct = ICET_FALSE;
     result += RenderEmptyTryRender();
     if (!g_render_callback_invoked) {
-        printrank("**** The draw callback was not called ****");
+        printrank("**** The draw callback was not called ****\n");
+        result = TEST_FAILED;
+    }
+    if (!g_render_callback_parameters_correct) {
+        printrank("**** Matricies were wrong in callback ****\n");
         result = TEST_FAILED;
     }
 
