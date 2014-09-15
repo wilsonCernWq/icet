@@ -22,6 +22,12 @@ SET(ICET_MINOR_VERSION 1)
 SET(ICET_PATCH_VERSION 0)
 SET(ICET_VERSION "${ICET_MAJOR_VERSION}.${ICET_MINOR_VERSION}.${ICET_PATCH_VERSION}")
 
+# CMake 2.8.12 and later supports an rpath mechanism on Mac OSX that allows
+# build and install targets to point to dependent libraries that are not
+# dependent on DYLD_LIBRARY_PATH. This variable turns that behavior on by
+# default and also suppresses CMake policy warning 0042.
+SET(CMAKE_MACOSX_RPATH ON)
+
 # Set output paths.
 SET(LIBRARY_OUTPUT_PATH ${ICET_BINARY_DIR}/lib CACHE PATH
   "Output directory for building all libraries.")
