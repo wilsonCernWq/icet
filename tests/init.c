@@ -29,14 +29,16 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifdef ICET_TESTS_USE_OPENGL
+#ifdef ICET_TESTS_USE_GLUT
 #ifndef __APPLE__
 #include <GL/glut.h>
-#include <GL/gl.h>
 #else
 #include <GLUT/glut.h>
-#include <OpenGL/gl.h>
 #endif
+#endif
+
+#ifdef ICET_TESTS_USE_GLFW
+#include <GLFW/glfw3.h>
 #endif
 
 #ifndef WIN32
@@ -58,11 +60,13 @@ int SINGLE_IMAGE_STRATEGY_LIST_SIZE = 4;
 IceTSizeType SCREEN_WIDTH;
 IceTSizeType SCREEN_HEIGHT;
 
-#ifdef ICET_TESTS_USE_OPENGL
+#ifdef ICET_TESTS_USE_GLUT
 static int windowId;
+#endif
 
-static int (*test_function)(void);
-#endif /* ICET_TESTS_USE_OPENGL */
+#ifdef ICET_TESTS_USE_GLFW
+static GLFWwindow *window;
+#endif
 
 #ifdef ICET_TESTS_USE_OPENGL
 static void checkOglError(void)
@@ -200,9 +204,13 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
     /*     while (i == 0) sleep(1); */
     /* } */
 
-#ifdef ICET_TESTS_USE_OPENGL
+#ifdef ICET_TESTS_USE_GLUT
   /* Let Glut have first pass at the arguments to grab any that it can use. */
     glutInit(argcp, *argvp);
+#endif
+
+#ifdef ICET_TESTS_USE_GLFW
+    if (!glfwInit()) { exit(1); }
 #endif
 
   /* Parse my arguments. */
@@ -250,8 +258,8 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
         exit(1);
     }
 
-#ifdef ICET_TESTS_USE_OPENGL
-  /* Create a renderable window. */
+#ifdef ICET_TESTS_USE_GLUT
+    /* Create a renderable window. */
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(width, height);
@@ -261,7 +269,25 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
         sprintf(title, "IceT Test %d of %d", rank, num_proc);
         windowId = glutCreateWindow(title);
     }
-#endif /* ICET_TESTS_USE_OPENGL */
+#endif /* ICET_TESTS_USE_GLUT */
+
+#ifdef ICET_TESTS_USE_GLFW
+    /* Create a renderable window. */
+    glfwWindowHint(GLFW_RED_BITS, 8);
+    glfwWindowHint(GLFW_GREEN_BITS, 8);
+    glfwWindowHint(GLFW_BLUE_BITS, 8);
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+    glfwWindowHint(GLFW_SAMPLES, 0);
+
+    {
+        char title[256];
+        sprintf(title, "IceT Test %d of %d", rank, num_proc);
+        window = glfwCreateWindow(width, height, title, NULL, NULL);
+    }
+
+    glfwMakeContextCurrent(window);
+#endif /* ICET_TESTS_USE_GLFW */
 
     SCREEN_WIDTH = width;
     SCREEN_HEIGHT = height;
@@ -319,7 +345,8 @@ IceTBoolean strategy_uses_single_image_strategy(IceTEnum strategy)
     }
 }
 
-#ifdef ICET_TESTS_USE_OPENGL
+#if defined(ICET_TESTS_USE_GLUT)
+static int (*test_function)(void);
 
 static void no_op()
 {
@@ -337,6 +364,8 @@ static void glut_draw()
     result = test_function();
 
     finalize_test(result);
+
+    glutDestroyWindow(windowId);
 
     exit(result);
 }
@@ -360,6 +389,31 @@ int run_test(int (*tf)(void))
     return TEST_NOT_PASSED;
 }
 
+#elif defined(ICET_TESTS_USE_GLFW)
+
+int run_test(int (*tf)(void))
+{
+    int result;
+
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0, 0, (GLsizei)SCREEN_WIDTH, (GLsizei)SCREEN_HEIGHT);
+    glClear(GL_COLOR_BUFFER_BIT);
+    swap_buffers();
+
+    result = tf();
+
+    finalize_test(result);
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return result;
+}
+
+#elif defined(ICET_TESTS_USE_OPENGL)
+
+#error "ICET_TESTS_USE_OPENGL defined but no window library is defined."
+
 #else /* ICET_TESTS_USE_OPENGL */
 
 int run_test(int (*tf)(void))
@@ -373,12 +427,20 @@ int run_test(int (*tf)(void))
     return result;
 }
 
-#endif /* ICET_TESTS_USE_OPENGL */
+#endif /* !ICET_TESTS_USE_OPENGL */
 
-#ifdef ICET_TESTS_USE_OPENGL
+#ifdef ICET_TESTS_USE_GLUT
 void swap_buffers(void)
 {
     glutSwapBuffers();
+}
+#endif
+
+#ifdef ICET_TESTS_USE_GLFW
+void swap_buffers(void)
+{
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 }
 #endif
 
@@ -428,7 +490,4 @@ void finalize_test(IceTInt result)
 
     icetDestroyContext(context);
     finalize_communication();
-#ifdef ICET_TESTS_USE_OPENGL
-    glutDestroyWindow(windowId);
-#endif
 }

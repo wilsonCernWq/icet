@@ -5,7 +5,7 @@
 ## This source code is released under the New BSD License.
 #
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 # Turn off policy 0017, which makes modules packaged with CMake find
 # any module rather than just others packaged with CMake.  This is
@@ -21,6 +21,12 @@ SET(ICET_MAJOR_VERSION 2)
 SET(ICET_MINOR_VERSION 1)
 SET(ICET_PATCH_VERSION 0)
 SET(ICET_VERSION "${ICET_MAJOR_VERSION}.${ICET_MINOR_VERSION}.${ICET_PATCH_VERSION}")
+
+# CMake 2.8.12 and later supports an rpath mechanism on Mac OSX that allows
+# build and install targets to point to dependent libraries that are not
+# dependent on DYLD_LIBRARY_PATH. This variable turns that behavior on by
+# default and also suppresses CMake policy warning 0042.
+SET(CMAKE_MACOSX_RPATH ON)
 
 # Set output paths.
 SET(LIBRARY_OUTPUT_PATH ${ICET_BINARY_DIR}/lib CACHE PATH
@@ -248,8 +254,8 @@ MACRO(ICET_ADD_LIBRARY library_name)
       )
     IF (NOT ICET_INSTALL_NO_DEVELOPMENT)
       INSTALL(EXPORT ${ICET_INSTALL_EXPORT_NAME}
-	DESTINATION ${ICET_INSTALL_LIB_DIR}
-	)
+        DESTINATION ${ICET_INSTALL_LIB_DIR}
+        )
     ENDIF (NOT ICET_INSTALL_NO_DEVELOPMENT)
   ENDIF(NOT ICET_INSTALL_NO_LIBRARIES)
 ENDMACRO(ICET_ADD_LIBRARY)

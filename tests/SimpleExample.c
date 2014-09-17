@@ -13,29 +13,80 @@
 #include "test-util.h"
 #include "test_codes.h"
 
-#ifdef __APPLE__
-#  include <OpenGL/gl.h>
-#  include <OpenGL/glu.h>
-#else
-#  include <GL/gl.h>
-#  include <GL/glu.h>
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi */
+#endif
 
 IceTInt rank;
 IceTInt num_proc;
 
+#define SPHERE_RESOLUTION 20
+#define SPHERE_RADIUS 0.5f
+#define SPHERE_NUM_QUADS (SPHERE_RESOLUTION*SPHERE_RESOLUTION/2)
+#define SPHERE_NUM_VERTICES (SPHERE_NUM_QUADS*4)
+
+static void GetSphereArrays(GLfloat **vertex_array_p, GLfloat **normal_array_p)
+{
+    static GLfloat vertex_array[SPHERE_NUM_VERTICES*3];
+    static GLfloat normal_array[SPHERE_NUM_VERTICES*3];
+    static GLboolean arrays_initialized = 0;
+
+    if (!arrays_initialized)
+    {
+        GLfloat cos_table[SPHERE_RESOLUTION+1];
+        GLfloat sin_table[SPHERE_RESOLUTION+1];
+        int theta_index, phi_index;
+
+        // Fill out tables.
+        for (theta_index = 0; theta_index <= SPHERE_RESOLUTION; theta_index++)
+        {
+            cos_table[theta_index]=cosf((2*M_PI/SPHERE_RESOLUTION)*theta_index);
+            sin_table[theta_index]=sinf((2*M_PI/SPHERE_RESOLUTION)*theta_index);
+        }
+
+        // Compute the vertices and normals.
+        GLfloat *vertex_p = vertex_array;
+        GLfloat *normal_p = normal_array;
+        for (phi_index = 0; phi_index < SPHERE_RESOLUTION/2; phi_index++)
+        {
+            for (theta_index = 0; theta_index<SPHERE_RESOLUTION; theta_index++)
+            {
+#define SET_VERT(t_index, p_index) \
+    normal_p[0] = cos_table[t_index]*sin_table[p_index]; \
+    normal_p[1] = sin_table[t_index]*sin_table[p_index]; \
+    normal_p[2] = cos_table[p_index]; \
+    vertex_p[0] = normal_p[0]*SPHERE_RADIUS; \
+    vertex_p[1] = normal_p[1]*SPHERE_RADIUS; \
+    vertex_p[2] = normal_p[2]*SPHERE_RADIUS; \
+    normal_p += 3; vertex_p += 3;
+                SET_VERT(theta_index, phi_index);
+                SET_VERT(theta_index, phi_index+1);
+                SET_VERT(theta_index+1, phi_index+1);
+                SET_VERT(theta_index+1, phi_index);
+            }
+        }
+
+        arrays_initialized = 1;
+    }
+
+    *vertex_array_p = vertex_array;
+    *normal_array_p = normal_array;
+}
+
 static void draw(void)
 {
-    static GLUquadricObj *sphere = NULL;
+    GLfloat *vertex_array;
+    GLfloat *normal_array;
 
-    if (sphere == NULL) {
-        sphere = gluNewQuadric();
-        gluQuadricDrawStyle(sphere, GLU_FILL);
-        gluQuadricNormals(sphere, GLU_SMOOTH);
-    }
+    GetSphereArrays(&vertex_array, &normal_array);
+    glVertexPointer(3, GL_FLOAT, 0, vertex_array);
+    glNormalPointer(GL_FLOAT, 0, vertex_array);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -50,7 +101,7 @@ static void draw(void)
     glPushMatrix();
       glMatrixMode(GL_MODELVIEW);
       glTranslatef((float)rank, 0, 0);
-      gluSphere(sphere, 0.5, 10, 30);
+      glDrawArrays(GL_QUADS, 0, SPHERE_NUM_VERTICES);
     glPopMatrix();
 }
 
