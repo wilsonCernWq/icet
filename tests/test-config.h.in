@@ -8,3 +8,7 @@
  */
 
 #cmakedefine ICET_TESTS_USE_OPENGL
+
+#cmakedefine ICET_TESTS_USE_GLUT
+
+#cmakedefine ICET_TESTS_USE_GLFW

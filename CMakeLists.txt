@@ -5,7 +5,7 @@
 ## This source code is released under the New BSD License.
 #
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 # Turn off policy 0017, which makes modules packaged with CMake find
 # any module rather than just others packaged with CMake.  This is
@@ -254,8 +254,8 @@ MACRO(ICET_ADD_LIBRARY library_name)
       )
     IF (NOT ICET_INSTALL_NO_DEVELOPMENT)
       INSTALL(EXPORT ${ICET_INSTALL_EXPORT_NAME}
-	DESTINATION ${ICET_INSTALL_LIB_DIR}
-	)
+        DESTINATION ${ICET_INSTALL_LIB_DIR}
+        )
     ENDIF (NOT ICET_INSTALL_NO_DEVELOPMENT)
   ENDIF(NOT ICET_INSTALL_NO_LIBRARIES)
 ENDMACRO(ICET_ADD_LIBRARY)
