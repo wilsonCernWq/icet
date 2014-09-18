@@ -6,32 +6,60 @@
 #
 
 SET(ICET_SRCS
-        porting.c
-        context.c
-        state.c
-        diagnostics.c
-        communication.c
-        tiles.c
-	timing.c
-        matrix.c
-        projections.c
-        draw.c
-        image.c
+  porting.c
+  context.c
+  state.c
+  diagnostics.c
+  communication.c
+  tiles.c
+  timing.c
+  matrix.c
+  projections.c
+  draw.c
+  image.c
 
-        ../strategies/common.c
-        ../strategies/select.c
-        ../strategies/direct.c
-        ../strategies/sequential.c
-        ../strategies/split.c
-        ../strategies/reduce.c
-        ../strategies/vtree.c
-        ../strategies/bswap.c
-        ../strategies/radixk.c
-        ../strategies/tree.c
-        ../strategies/automatic.c
-)
+  ../strategies/common.c
+  ../strategies/select.c
+  ../strategies/direct.c
+  ../strategies/sequential.c
+  ../strategies/split.c
+  ../strategies/reduce.c
+  ../strategies/vtree.c
+  ../strategies/bswap.c
+  ../strategies/radixk.c
+  ../strategies/tree.c
+  ../strategies/automatic.c
+  )
 
-ICET_ADD_LIBRARY(IceTCore ${ICET_SRCS})
+SET(ICET_HEADERS
+  ../include/IceT.h
+  ../include/IceTDevCommunication.h
+  ../include/IceTDevContext.h
+  ../include/IceTDevDiagnostics.h
+  ../include/IceTDevGLImage.h
+  ../include/IceTDevImage.h
+  ../include/IceTDevMatrix.h
+  ../include/IceTDevPorting.h
+  ../include/IceTDevProjections.h
+  ../include/IceTDevState.h
+  ../include/IceTDevStrategySelect.h
+  ../include/IceTDevTiming.h
+
+  cc_composite_func_body.h
+  cc_composite_template_body.h
+  compress_func_body.h
+  compress_template_body.h
+  decompress_func_body.h
+  decompress_template_body.h
+
+  ../strategies/common.h
+  )
+
+ICET_ADD_LIBRARY(IceTCore ${ICET_SRCS} ${ICET_HEADERS})
+
+SET_SOURCE_FILES_PROPERTIES(${ICET_HEADERS}
+  PROPERTIES HEADER_FILE_ONLY TRUE
+  )
 
 IF (UNIX)
   # Depend on the math library under Unix.
