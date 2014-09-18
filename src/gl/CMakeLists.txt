@@ -6,12 +6,20 @@
 #
 
 SET(ICET_GL_SRCS
-        gl_state.c
-	gl_draw.c
-	gl_image.c
-)
+  gl_state.c
+  gl_draw.c
+  gl_image.c
+  )
 
-ICET_ADD_LIBRARY(IceTGL ${ICET_GL_SRCS})
+SET(ICET_GL_HEADERS
+  ../include/IceTGL.h
+  )
+
+ICET_ADD_LIBRARY(IceTGL ${ICET_GL_SRCS} ${ICET_GL_HEADERS})
+
+SET_SOURCE_FILES_PROPERTIES(${ICET_GL_HEADERS}
+  PROPERTIES HEADER_FILE_ONLY TRUE
+  )
 
 TARGET_LINK_LIBRARIES(IceTGL
   IceTCore
