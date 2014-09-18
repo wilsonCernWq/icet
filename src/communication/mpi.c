@@ -231,11 +231,11 @@ IceTCommunicator icetCreateMPICommunicator(MPI_Comm mpi_comm)
     MPI_Errhandler_create(ErrorHandler, &eh);
     MPI_Errhandler_set(*((MPI_Comm *)comm->data), eh);
     MPI_Errhandler_free(&eh);
-#else // MPI_VERSION >= 2
+#else /* MPI_VERSION >= 2 */
     MPI_Comm_create_errhandler(ErrorHandler, &eh);
     MPI_Comm_set_errhandler(*((MPI_Comm *)comm->data), eh);
     MPI_Errhandler_free(&eh);
-#endif // MPI_VERSION >= 2
+#endif /* MPI_VERSION >= 2 */
 #endif
 
     return comm;
