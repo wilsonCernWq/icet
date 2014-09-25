@@ -241,6 +241,13 @@ ICET_EXPORT IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
                                     const IceTDouble *modelview_matrix,
                                     const IceTFloat *background_color);
 
+ICET_EXPORT IceTImage icetCompositeImage(const IceTVoid *color_buffer,
+                                         const IceTVoid *depth_buffer,
+                                         const IceTInt *valid_pixels_viewport,
+                                         const IceTDouble *projection_matrix,
+                                         const IceTDouble *modelview_matrix,
+                                         const IceTFloat *background_color);
+
 #define ICET_DIAG_OFF           (IceTEnum)0x0000
 #define ICET_DIAG_ERRORS        (IceTEnum)0x0001
 #define ICET_DIAG_WARNINGS      (IceTEnum)0x0003
@@ -315,7 +322,8 @@ ICET_EXPORT void icetDiagnostics(IceTBitField mask);
 
 #define ICET_RENDERED_VIEWPORT  (ICET_STATE_FRAME_START | (IceTEnum)0x0020)
 #define ICET_RENDER_BUFFER      (ICET_STATE_FRAME_START | (IceTEnum)0x0021)
-#define ICET_TILE_PROJECTIONS   (ICET_STATE_FRAME_START | (IceTEnum)0x0024)
+#define ICET_PRE_RENDERED       (ICET_STATE_FRAME_START | (IceTEnum)0x0022)
+#define ICET_TILE_PROJECTIONS   (ICET_STATE_FRAME_START | (IceTEnum)0x0023)
 
 #define ICET_STATE_TIMING_START (IceTEnum)0x000000C0
 

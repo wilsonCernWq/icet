@@ -40,7 +40,7 @@ void icetResetTiles(void)
 #define MAX(x, y) ((x) >= (y) ? (x) : (y))
 #endif
 int  icetAddTile(IceTInt x, IceTInt y, IceTSizeType width, IceTSizeType height,
-		 int display_rank)
+                 int display_rank)
 {
     IceTInt num_tiles;
     IceTInt *viewports;
@@ -69,26 +69,26 @@ int  icetAddTile(IceTInt x, IceTInt y, IceTSizeType width, IceTSizeType height,
 
   /* Check and update display ranks. */
     if (display_rank >= num_processors) {
-	sprintf(msg, "icetDisplayNodes: Invalid rank for tile %d.",
-		(int)num_tiles);
-	icetRaiseError(msg, ICET_INVALID_VALUE);
-	free(display_nodes);
-	return -1;
+        sprintf(msg, "icetDisplayNodes: Invalid rank for tile %d.",
+                (int)num_tiles);
+        icetRaiseError(msg, ICET_INVALID_VALUE);
+        free(display_nodes);
+        return -1;
     }
     for (i = 0; i < num_tiles; i++) {
-	if (display_nodes[i] == display_rank) {
-	    sprintf(msg, "icetDisplayNodes: Rank %d used for tiles %d and %d.",
-		    display_rank, i, (int)num_tiles);
-	    icetRaiseError(msg, ICET_INVALID_VALUE);
-	    free(display_nodes);
-	    return -1;
-	}
+        if (display_nodes[i] == display_rank) {
+            sprintf(msg, "icetDisplayNodes: Rank %d used for tiles %d and %d.",
+                    display_rank, i, (int)num_tiles);
+            icetRaiseError(msg, ICET_INVALID_VALUE);
+            free(display_nodes);
+            return -1;
+        }
     }
     display_nodes[num_tiles] = display_rank;
     icetStateSetIntegerv(ICET_DISPLAY_NODES, num_tiles+1, display_nodes);
     free(display_nodes);
     if (display_rank == rank) {
-	icetStateSetInteger(ICET_TILE_DISPLAYED, num_tiles);
+        icetStateSetInteger(ICET_TILE_DISPLAYED, num_tiles);
     }
 
   /* Get viewports. */
@@ -99,10 +99,10 @@ int  icetAddTile(IceTInt x, IceTInt y, IceTSizeType width, IceTSizeType height,
     gvp[0] = x;  gvp[1] = y;
     gvp[2] = x + (IceTInt)width;  gvp[3] = y + (IceTInt)height;
     for (i = 0; i < num_tiles; i++) {
-	gvp[0] = MIN(gvp[0], viewports[i*4+0]);
-	gvp[1] = MIN(gvp[1], viewports[i*4+1]);
-	gvp[2] = MAX(gvp[2], viewports[i*4+0] + viewports[i*4+2]);
-	gvp[3] = MAX(gvp[3], viewports[i*4+1] + viewports[i*4+3]);
+        gvp[0] = MIN(gvp[0], viewports[i*4+0]);
+        gvp[1] = MIN(gvp[1], viewports[i*4+1]);
+        gvp[2] = MAX(gvp[2], viewports[i*4+0] + viewports[i*4+2]);
+        gvp[3] = MAX(gvp[3], viewports[i*4+1] + viewports[i*4+3]);
     }
     gvp[2] -= gvp[0];
     gvp[3] -= gvp[1];
@@ -142,8 +142,8 @@ void icetPhysicalRenderSize(IceTInt width, IceTInt height)
     icetGetIntegerv(ICET_TILE_MAX_WIDTH, &max_width);
     icetGetIntegerv(ICET_TILE_MAX_HEIGHT, &max_height);
     if ((width < max_width) || (height < max_height)) {
-	icetRaiseWarning("Physical render dimensions not large enough"
-			 " to render all tiles.", ICET_INVALID_VALUE);
+        icetRaiseWarning("Physical render dimensions not large enough"
+                         " to render all tiles.", ICET_INVALID_VALUE);
     }
 
     icetStateSetInteger(ICET_PHYSICAL_RENDER_WIDTH, width);
@@ -151,8 +151,8 @@ void icetPhysicalRenderSize(IceTInt width, IceTInt height)
 }
 
 void icetBoundingBoxd(IceTDouble x_min, IceTDouble x_max,
-		      IceTDouble y_min, IceTDouble y_max,
-		      IceTDouble z_min, IceTDouble z_max)
+                      IceTDouble y_min, IceTDouble y_max,
+                      IceTDouble z_min, IceTDouble z_max)
 {
     IceTDouble vertices[8*3];
 
@@ -170,17 +170,24 @@ void icetBoundingBoxd(IceTDouble x_min, IceTDouble x_max,
 }
 
 void icetBoundingBoxf(IceTFloat x_min, IceTFloat x_max,
-		      IceTFloat y_min, IceTFloat y_max,
-		      IceTFloat z_min, IceTFloat z_max)
+                      IceTFloat y_min, IceTFloat y_max,
+                      IceTFloat z_min, IceTFloat z_max)
 {
     icetBoundingBoxd(x_min, x_max, y_min, y_max, z_min, z_max);
 }
 
 void icetBoundingVertices(IceTInt size, IceTEnum type, IceTSizeType stride,
-			  IceTSizeType count, const IceTVoid *pointer)
+                          IceTSizeType count, const IceTVoid *pointer)
 {
     IceTDouble *verts;
     int i, j;
+
+    if (count < 1) {
+        /* No vertices. (Must be clearing them out.) */
+        icetStateSetDoublev(ICET_GEOMETRY_BOUNDS, 0, NULL);
+        icetStateSetInteger(ICET_NUM_BOUNDING_VERTS, 0);
+        return;
+    }
 
     if (stride < 1) {
         stride = size*icetTypeWidth(type);
@@ -188,8 +195,8 @@ void icetBoundingVertices(IceTInt size, IceTEnum type, IceTSizeType stride,
 
     verts = malloc(count*3*sizeof(IceTDouble));
     for (i = 0; i < count; i++) {
-	for (j = 0; j < 3; j++) {
-	    switch (type) {
+        for (j = 0; j < 3; j++) {
+            switch (type) {
 #define castcopy(ptype)							\
   if (j < size) {							\
       verts[i*3+j] = ((ptype *)pointer)[i*stride/sizeof(type)+j];	\
@@ -200,21 +207,21 @@ void icetBoundingVertices(IceTInt size, IceTEnum type, IceTSizeType stride,
       verts[i*3+j] /= ((ptype *)pointer)[i*stride/sizeof(type)+4];	\
   }									\
   break;
-	      case ICET_SHORT:
-		  castcopy(IceTShort);
-	      case ICET_INT:
-		  castcopy(IceTInt);
-	      case ICET_FLOAT:
-		  castcopy(IceTFloat);
-	      case ICET_DOUBLE:
-		  castcopy(IceTDouble);
-	      default:
-		  icetRaiseError("Bad type to icetBoundingVertices.",
-				 ICET_INVALID_ENUM);
-		  free(verts);
-		  return;
-	    }
-	}
+              case ICET_SHORT:
+                  castcopy(IceTShort);
+              case ICET_INT:
+                  castcopy(IceTInt);
+              case ICET_FLOAT:
+                  castcopy(IceTFloat);
+              case ICET_DOUBLE:
+                  castcopy(IceTDouble);
+              default:
+                  icetRaiseError("Bad type to icetBoundingVertices.",
+                                 ICET_INVALID_ENUM);
+                  free(verts);
+                  return;
+            }
+        }
     }
 
     icetStateSetDoublev(ICET_GEOMETRY_BOUNDS, count*3, verts);

@@ -191,6 +191,18 @@ static void icetSparseImageSplitChoosePartitions(
                                            IceTSizeType first_offset,
                                            IceTSizeType *offsets);
 
+/* This function is used to get the image for a tile. It will either render
+   the tile on demand (with renderTile) or get the image from a pre-rendered
+   image (with prerenderedTile). The screen_viewport is set to the region of
+   valid pixels in the returned image. The tile_viewport gives the region
+   where the pixels reside in the tile. (The width and height of the two
+   viewports will be the same.) Pixels outside of these viewports are
+   undefined. */
+static IceTImage generateTile(int tile,
+                              IceTInt *screen_viewport,
+                              IceTInt *target_viewport,
+                              IceTImage tile_buffer);
+
 /* Renders the geometry for a tile and returns an image of the rendered data.
    If IceT determines that it is most efficient to render the data directly to
    the tile projection, then screen_viewport and tile_viewport will be set to
@@ -199,15 +211,23 @@ static void icetSparseImageSplitChoosePartitions(
    cleared to the background before used.  If tile_buffer is not a null image,
    that image will be used to render and be returned.  If IceT determines that
    it is most efficient to render a projection that does not exactly fit a tile,
-   tile_buffer will be ignored an image with an internal buffer will be
+   tile_buffer will be ignored and image with an internal buffer will be
    returned.  screen_viewport will give the offset and dimensions of the valid
    pixels in the returned buffer.  tile_viewport gives the offset and dimensions
-   where these pixels reside in the tile.  (The dimensions for both will be the
-   same.)  As before, pixels outside of these viewports are undefined. */
+   where these pixels reside in the tile.  (The width and height for both will
+   be the same.)  As before, pixels outside of these viewports are undefined. */
 static IceTImage renderTile(int tile,
                             IceTInt *screen_viewport,
-                            IceTInt *tile_viewport,
+                            IceTInt *target_viewport,
                             IceTImage tile_buffer);
+
+/* Returns the pre-rendered image, the region of valid pixels in the tile in
+   screen_viewport, and the region where the pixels reside in the tile in
+   tile_viewport. */
+static IceTImage prerenderedTile(int tile,
+                                 IceTInt *screen_viewport,
+                                 IceTInt *target_viewport);
+
 /* Gets an image buffer attached to this context. */
 static IceTImage getRenderBuffer(void);
 
@@ -2022,7 +2042,8 @@ void icetGetTileImage(IceTInt tile, IceTImage image)
     height = viewports[4*tile+3];
     icetImageSetDimensions(image, width, height);
 
-    rendered_image = renderTile(tile, screen_viewport, target_viewport, image);
+    rendered_image =
+            generateTile(tile, screen_viewport, target_viewport, image);
 
     icetTimingBufferReadBegin();
 
@@ -2032,7 +2053,7 @@ void icetGetTileImage(IceTInt tile, IceTImage image)
              || (screen_viewport[1] != target_viewport[1])
              || (screen_viewport[2] != target_viewport[2])
              || (screen_viewport[3] != target_viewport[3]) ) {
-            icetRaiseError("Inconsistent values returned from renderTile.",
+            icetRaiseError("Inconsistent values returned from generateTile.",
                            ICET_SANITY_CHECK_FAIL);
         }
     } else {
@@ -2059,8 +2080,8 @@ void icetGetCompressedTileImage(IceTInt tile, IceTSparseImage compressed_image)
     height = viewports[4*tile+3];
     icetSparseImageSetDimensions(compressed_image, width, height);
 
-    raw_image = renderTile(tile, screen_viewport, target_viewport,
-                           icetImageNull());
+    raw_image = generateTile(tile, screen_viewport, target_viewport,
+                             icetImageNull());
 
     if ((target_viewport[2] < 1) || (target_viewport[3] < 1)) {
         /* Tile empty.  Just clear result. */
@@ -2442,6 +2463,20 @@ void icetClearImageTrueBackground(IceTImage image)
     icetStateSetInteger(ICET_BACKGROUND_COLOR_WORD, original_background_word);
 }
 
+static IceTImage generateTile(int tile,
+                              IceTInt *screen_viewport,
+                              IceTInt *target_viewport,
+                              IceTImage tile_buffer)
+{
+    IceTBoolean use_prerender;
+    icetGetBooleanv(ICET_PRE_RENDERED, &use_prerender);
+    if (use_prerender) {
+        return prerenderedTile(tile, screen_viewport, target_viewport);
+    } else {
+        return renderTile(tile, screen_viewport, target_viewport, tile_buffer);
+    }
+}
+
 static IceTImage renderTile(int tile,
                             IceTInt *screen_viewport,
                             IceTInt *target_viewport,
@@ -2670,6 +2705,53 @@ static IceTImage renderTile(int tile,
     icetTimingRenderEnd();
 
     return render_buffer;
+}
+
+static IceTImage prerenderedTile(int tile,
+                                 IceTInt *screen_viewport,
+                                 IceTInt *target_viewport)
+{
+    const IceTInt *contained_viewport;
+    const IceTInt *tile_viewport;
+
+    icetRaiseDebug1("Getting viewport for tile %d in prerendered image", tile);
+    contained_viewport = icetUnsafeStateGetInteger(ICET_CONTAINED_VIEWPORT);
+    tile_viewport = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS) + 4*tile;
+
+    /* Start with the tile viewport. */
+    screen_viewport[0] = tile_viewport[0];
+    screen_viewport[1] = tile_viewport[1];
+    screen_viewport[2] = tile_viewport[2];
+    screen_viewport[3] = tile_viewport[3];
+
+    target_viewport[0] = target_viewport[1] = 0;
+
+    /* Clip by the contained viewport. */
+    if (contained_viewport[0] > screen_viewport[0]) {
+        IceTInt diff = contained_viewport[0] - screen_viewport[0];
+        screen_viewport[0] = contained_viewport[0];
+        target_viewport[0] = diff;
+        screen_viewport[2] -= diff;
+        if (screen_viewport[2] < 0) { screen_viewport[2] = 0; }
+    }
+    if (contained_viewport[2] < screen_viewport[2]) {
+        screen_viewport[2] = contained_viewport[2];
+    }
+    if (contained_viewport[1] > screen_viewport[1]) {
+        IceTInt diff = contained_viewport[1] - screen_viewport[1];
+        screen_viewport[1] = contained_viewport[1];
+        target_viewport[1] = diff;
+        screen_viewport[3] -= diff;
+        if (screen_viewport[3] < 0) { screen_viewport[3] = 0; }
+    }
+    if (contained_viewport[3] < screen_viewport[3]) {
+        screen_viewport[3] = contained_viewport[3];
+    }
+
+    target_viewport[2] = screen_viewport[2];
+    target_viewport[3] = screen_viewport[3];
+
+    return icetRetrieveStateImage(ICET_RENDER_BUFFER);
 }
 
 static IceTImage getRenderBuffer(void)
