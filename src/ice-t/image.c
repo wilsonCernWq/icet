@@ -21,6 +21,7 @@
 #include <string.h>
 
 #define ICET_IMAGE_MAGIC_NUM            (IceTEnum)0x004D5000
+#define ICET_IMAGE_POINTERS_MAGIC_NUM   (IceTEnum)0x004D5100
 #define ICET_SPARSE_IMAGE_MAGIC_NUM     (IceTEnum)0x004D6000
 
 #define ICET_IMAGE_MAGIC_NUM_INDEX              0
@@ -46,8 +47,10 @@ typedef IceTUnsignedInt32 IceTRunLengthType;
 static void ICET_TEST_IMAGE_HEADER(IceTImage image)
 {
     if (!icetImageIsNull(image)) {
-        if (    ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]
-             != ICET_IMAGE_MAGIC_NUM ) {
+        IceTEnum magic_num =
+                ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX];
+        if (   (magic_num != ICET_IMAGE_MAGIC_NUM)
+            && (magic_num != ICET_IMAGE_POINTERS_MAGIC_NUM) ) {
             icetRaiseError("Detected invalid image header.",
                            ICET_SANITY_CHECK_FAIL);
         }
@@ -254,6 +257,12 @@ IceTSizeType icetImageBufferSizeType(IceTEnum color_format,
             + width*height*(color_pixel_size + depth_pixel_size) );
 }
 
+IceTSizeType icetImagePointerBufferSize(void)
+{
+    return (  ICET_IMAGE_DATA_START_INDEX*sizeof(IceTUInt)
+            + 2*(sizeof(const IceTVoid *)) );
+}
+
 IceTSizeType icetSparseImageBufferSize(IceTSizeType width, IceTSizeType height)
 {
     IceTEnum color_format, depth_format;
@@ -309,6 +318,22 @@ IceTImage icetGetStateBufferImage(IceTEnum pname,
     return icetImageAssignBuffer(buffer, width, height);
 }
 
+IceTImage icetGetStatePointerImage(IceTEnum pname,
+                                   IceTSizeType width,
+                                   IceTSizeType height,
+                                   const IceTVoid *color_buffer,
+                                   const IceTVoid *depth_buffer)
+{
+    IceTVoid *buffer;
+    IceTSizeType buffer_size;
+
+    buffer_size = icetImagePointerBufferSize();
+    buffer = icetGetStateBuffer(pname, buffer_size);
+
+    return icetImagePointerAssignBuffer(
+                buffer, width, height, color_buffer, depth_buffer);
+}
+
 IceTImage icetImageAssignBuffer(IceTVoid *buffer,
                                 IceTSizeType width,
                                 IceTSizeType height)
@@ -353,6 +378,62 @@ IceTImage icetImageAssignBuffer(IceTVoid *buffer,
                                            depth_format,
                                            width,
                                            height);
+
+    return image;
+}
+
+IceTImage icetImagePointerAssignBuffer(IceTVoid *buffer,
+                                       IceTSizeType width,
+                                       IceTSizeType height,
+                                       const IceTVoid *color_buffer,
+                                       const IceTVoid *depth_buffer)
+{
+    /* This is a bit hacky, but most of the entries for regular images and
+     * pointer images are the same. Use that function to fill in most of
+     * the entries and fix those that are different. */
+    IceTImage image = icetImageAssignBuffer(buffer, width, height);
+
+    {
+        IceTInt *header = ICET_IMAGE_HEADER(image);
+        /* Our magic number is different. */
+        header[ICET_IMAGE_MAGIC_NUM_INDEX] = ICET_IMAGE_POINTERS_MAGIC_NUM;
+        /* It is invalid to use this type of image as a single buffer. */
+        header[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX] = -1;
+    }
+
+    /* Check that the image buffers make sense. */
+    if (icetImageGetColorFormat(image) == ICET_IMAGE_COLOR_NONE) {
+        if (color_buffer != NULL) {
+            icetRaiseError(
+                "Given a color buffer when color format is set to none.",
+                ICET_INVALID_VALUE);
+        }
+    } else {
+        if (color_buffer == NULL) {
+            icetRaiseError(
+                "Not given a color buffer when color format requires one.",
+                ICET_INVALID_VALUE);
+        }
+    }
+    if (icetImageGetDepthFormat(image) == ICET_IMAGE_DEPTH_NONE) {
+        if (depth_buffer != NULL) {
+            icetRaiseError(
+                "Given a depth buffer when depth format is set to none.",
+                ICET_INVALID_VALUE);
+        }
+    } else {
+        if (depth_buffer == NULL) {
+            icetRaiseError(
+                "Not given a depth buffer when depth format requires one.",
+                ICET_INVALID_VALUE);
+        }
+    }
+
+    {
+        const IceTVoid **data = ICET_IMAGE_DATA(image);
+        data[0] = color_buffer;
+        data[1] = depth_buffer;
+    }
 
     return image;
 }
@@ -584,11 +665,14 @@ void icetImageSetDimensions(IceTImage image,
 
     ICET_IMAGE_HEADER(image)[ICET_IMAGE_WIDTH_INDEX] = (IceTInt)width;
     ICET_IMAGE_HEADER(image)[ICET_IMAGE_HEIGHT_INDEX] = (IceTInt)height;
-    ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX]
-        = (IceTInt)icetImageBufferSizeType(icetImageGetColorFormat(image),
-                                           icetImageGetDepthFormat(image),
-                                           width,
-                                           height);
+    if (   ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]
+        == ICET_IMAGE_MAGIC_NUM) {
+        ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX]
+              = (IceTInt)icetImageBufferSizeType(icetImageGetColorFormat(image),
+                                                 icetImageGetDepthFormat(image),
+                                                 width,
+                                                 height);
+    }
 }
 
 void icetSparseImageSetDimensions(IceTSparseImage image,
@@ -638,11 +722,28 @@ const IceTVoid *icetImageGetColorConstVoid(const IceTImage image,
         *pixel_size = colorPixelSize(color_format);
     }
 
-    return ICET_IMAGE_DATA(image);
+    switch (ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]) {
+    case ICET_IMAGE_MAGIC_NUM:
+        return ICET_IMAGE_DATA(image);
+    case ICET_IMAGE_POINTERS_MAGIC_NUM:
+        return ((const IceTVoid **)ICET_IMAGE_DATA(image))[0];
+    default:
+        icetRaiseError("Detected invalid image header.",
+                       ICET_SANITY_CHECK_FAIL);
+        return NULL;
+    }
 }
 IceTVoid *icetImageGetColorVoid(IceTImage image, IceTSizeType *pixel_size)
 {
     const IceTVoid *const_buffer = icetImageGetColorConstVoid(image, pixel_size);
+
+    /* Raise an exception for images made of pointers, which we set as constant
+     * since all internally made pointers are single buffers. */
+    if (   ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]
+        == ICET_IMAGE_POINTERS_MAGIC_NUM) {
+        icetRaiseError("Images of pointers are for reading only.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
 
     /* This const cast is OK because we actually got the pointer from a
        non-const image. */
@@ -663,11 +764,15 @@ const IceTUByte *icetImageGetColorcub(const IceTImage image)
 }
 IceTUByte *icetImageGetColorub(IceTImage image)
 {
-    const IceTUByte *const_buffer = icetImageGetColorcub(image);
+    IceTEnum color_format = icetImageGetColorFormat(image);
 
-    /* This const cast is OK because we actually got the pointer from a
-       non-const image. */
-    return (IceTUByte *)const_buffer;
+    if (color_format != ICET_IMAGE_COLOR_RGBA_UBYTE) {
+        icetRaiseError("Color format is not of type ubyte.",
+                       ICET_INVALID_OPERATION);
+        return NULL;
+    }
+
+    return icetImageGetColorVoid(image, NULL);
 }
 const IceTUInt *icetImageGetColorcui(const IceTImage image)
 {
@@ -691,37 +796,58 @@ const IceTFloat *icetImageGetColorcf(const IceTImage image)
 }
 IceTFloat *icetImageGetColorf(IceTImage image)
 {
-    const IceTFloat *const_buffer = icetImageGetColorcf(image);
+    IceTEnum color_format = icetImageGetColorFormat(image);
 
+    if (color_format != ICET_IMAGE_COLOR_RGBA_FLOAT) {
+        icetRaiseError("Color format is not of type float.",
+                       ICET_INVALID_OPERATION);
+        return NULL;
+    }
 
-    /* This const cast is OK because we actually got the pointer from a
-       non-const image. */
-    return (IceTFloat *)const_buffer;
+    return icetImageGetColorVoid(image, NULL);
 }
 
 const IceTVoid *icetImageGetDepthConstVoid(const IceTImage image,
                                            IceTSizeType *pixel_size)
 {
     IceTEnum color_format = icetImageGetColorFormat(image);
-    IceTSizeType color_format_bytes;
-    const IceTByte *image_data_pointer;
 
     if (pixel_size) {
         IceTEnum depth_format = icetImageGetDepthFormat(image);
         *pixel_size = depthPixelSize(depth_format);
     }
 
-    color_format_bytes = (  icetImageGetNumPixels(image)
-                          * colorPixelSize(color_format) );
+    switch (ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]) {
+    case ICET_IMAGE_MAGIC_NUM:
+    {
+        IceTSizeType color_format_bytes = (  icetImageGetNumPixels(image)
+                                           * colorPixelSize(color_format) );
 
-    /* Cast to IceTByte to ensure pointer arithmetic is correct. */
-    image_data_pointer = (const IceTByte*)ICET_IMAGE_DATA(image);
+        /* Cast to IceTByte to ensure pointer arithmetic is correct. */
+        const IceTByte *image_data_pointer =
+                (const IceTByte*)ICET_IMAGE_DATA(image);
 
-    return image_data_pointer + color_format_bytes;
+        return image_data_pointer + color_format_bytes;
+    }
+    case ICET_IMAGE_POINTERS_MAGIC_NUM:
+        return ((const IceTVoid **)ICET_IMAGE_DATA(image))[0];
+    default:
+        icetRaiseError("Detected invalid image header.",
+                       ICET_SANITY_CHECK_FAIL);
+        return NULL;
+    }
 }
 IceTVoid *icetImageGetDepthVoid(IceTImage image, IceTSizeType *pixel_size)
 {
     const IceTVoid *const_buffer =icetImageGetDepthConstVoid(image, pixel_size);
+
+    /* Raise an exception for images made of pointers, which we set as constant
+     * since all internally made pointers are single buffers. */
+    if (   ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]
+        == ICET_IMAGE_POINTERS_MAGIC_NUM) {
+        icetRaiseError("Images of pointers are for reading only.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
 
     /* This const cast is OK because we actually got the pointer from a
        non-const image. */
@@ -741,12 +867,15 @@ const IceTFloat *icetImageGetDepthcf(const IceTImage image)
 }
 IceTFloat *icetImageGetDepthf(IceTImage image)
 {
-    const IceTFloat *const_buffer = icetImageGetDepthcf(image);
+    IceTEnum depth_format = icetImageGetDepthFormat(image);
 
+    if (depth_format != ICET_IMAGE_DEPTH_FLOAT) {
+        icetRaiseError("Depth format is not of type float.",
+                       ICET_INVALID_OPERATION);
+        return NULL;
+    }
 
-    /* This const cast is OK because we actually got the pointer from a
-       non-const image. */
-    return (IceTFloat *)const_buffer;
+    return icetImageGetDepthVoid(image, NULL);
 }
 
 void icetImageCopyColorub(const IceTImage image,
@@ -1095,6 +1224,14 @@ void icetImagePackageForSend(IceTImage image,
 
     *buffer = image.opaque_internals;
     *size = ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX];
+
+    if (*size < 0) {
+        /* Images of pointers have less than zero size to alert they are not
+         * real buffers. */
+        icetRaiseError(
+                  "Attempting to package an image that is not a single buffer.",
+                    ICET_SANITY_CHECK_FAIL);
+    }
 
     if (*size != icetImageBufferSizeType(icetImageGetColorFormat(image),
                                          icetImageGetDepthFormat(image),
