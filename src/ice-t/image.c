@@ -318,6 +318,12 @@ IceTImage icetGetStateBufferImage(IceTEnum pname,
     return icetImageAssignBuffer(buffer, width, height);
 }
 
+IceTImage icetRetrieveStateImage(IceTEnum pname)
+{
+    return icetImageUnpackageFromReceive(
+                (IceTVoid *)icetUnsafeStateGetBuffer(pname));
+}
+
 IceTImage icetGetStatePointerImage(IceTEnum pname,
                                    IceTSizeType width,
                                    IceTSizeType height,
@@ -1245,13 +1251,15 @@ void icetImagePackageForSend(IceTImage image,
 IceTImage icetImageUnpackageFromReceive(IceTVoid *buffer)
 {
     IceTImage image;
+    IceTEnum magic_number;
     IceTEnum color_format, depth_format;
 
     image.opaque_internals = buffer;
 
   /* Check the image for validity. */
-    if (    ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX]
-         != ICET_IMAGE_MAGIC_NUM ) {
+    magic_number = ICET_IMAGE_HEADER(image)[ICET_IMAGE_MAGIC_NUM_INDEX];
+    if (   (magic_number != ICET_IMAGE_MAGIC_NUM)
+        && (magic_number != ICET_IMAGE_POINTERS_MAGIC_NUM) ) {
         icetRaiseError("Invalid image buffer: no magic number.",
                        ICET_INVALID_VALUE);
         image.opaque_internals = NULL;
@@ -2664,42 +2672,21 @@ static IceTImage renderTile(int tile,
     return render_buffer;
 }
 
-/* This function is full of hackery. */
 static IceTImage getRenderBuffer(void)
 {
     /* Check to see if we are in the same frame as the last time we returned
        this buffer.  In that case, just restore the buffer because it still has
        the image we need. */
-    if (  icetStateGetTime(ICET_RENDER_BUFFER_HOLD)
+    if (  icetStateGetTime(ICET_RENDER_BUFFER)
         > icetStateGetTime(ICET_IS_DRAWING_FRAME) ) {
-      /* A little bit of hackery: this assumes that a buffer initialized is the
-         same one returned from icetImagePackageForSend.  It (currently)
-         does. */
-        IceTVoid *buffer;
-        icetRaiseDebug("Last render should still be good.");
-        icetGetPointerv(ICET_RENDER_BUFFER_HOLD, &buffer);
-        return icetImageUnpackageFromReceive(buffer);
+        return icetRetrieveStateImage(ICET_RENDER_BUFFER);
     } else {
         IceTInt dim[2];
-        IceTImage image;
-        IceTVoid *buffer;
-        IceTSizeType dummy_size;
 
         icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &dim[0]);
         icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &dim[1]);
 
         /* Create a new image object. */
-        image = icetGetStateBufferImage(ICET_RENDER_BUFFER, dim[0], dim[1]);
-
-        /* Record image size and pointer to memory.  It is important to "touch"
-           ICET_RENDER_BUFFER_HOLD to signify the time we created the image so
-           that the above check works on the next call. */
-
-        icetStateSetIntegerv(ICET_RENDER_BUFFER_SIZE, 2, dim);
-
-        icetImagePackageForSend(image, &buffer, &dummy_size);
-        icetStateSetPointer(ICET_RENDER_BUFFER_HOLD, buffer);
-
-        return image;
+        return icetGetStateBufferImage(ICET_RENDER_BUFFER, dim[0], dim[1]);
     }
 }

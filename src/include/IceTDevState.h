@@ -62,6 +62,7 @@ ICET_EXPORT const IceTFloat   *icetUnsafeStateGetFloat(IceTEnum pname);
 ICET_EXPORT const IceTInt     *icetUnsafeStateGetInteger(IceTEnum pname);
 ICET_EXPORT const IceTBoolean *icetUnsafeStateGetBoolean(IceTEnum pname);
 ICET_EXPORT const IceTVoid   **icetUnsafeStateGetPointer(IceTEnum pname);
+ICET_EXPORT const IceTVoid    *icetUnsafeStateGetBuffer(IceTEnum pname);
 
 ICET_EXPORT IceTDouble  *icetStateAllocateDouble(IceTEnum pname,
                                                  IceTSizeType num_entries);

@@ -26,6 +26,7 @@ extern "C" {
 ICET_EXPORT IceTImage icetGetStateBufferImage(IceTEnum pname,
                                               IceTSizeType width,
                                               IceTSizeType height);
+ICET_EXPORT IceTImage icetRetrieveStateImage(IceTEnum pname);
 ICET_EXPORT IceTSizeType icetImageBufferSize(IceTSizeType width,
                                              IceTSizeType height);
 ICET_EXPORT IceTSizeType icetImageBufferSizeType(IceTEnum color_format,
