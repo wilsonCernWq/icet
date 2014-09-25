@@ -45,6 +45,7 @@ ENDIF (NOT ICET_TESTS_USE_OPENGL)
 SET(MyTests
   BackgroundCorrect.c
   CompressionSize.c
+  FloatingViewport.c
   Interlace.c
   MaxImageSplit.c
   OddImageSizes.c
@@ -67,6 +68,15 @@ ENDIF (ICET_TESTS_USE_OPENGL)
 
 SET(UTIL_SRCS init.c ppm.c)
 
+SET(TEST_HEADERS
+  test_codes.h
+  test-util.h
+  mpi_comm.h
+  )
+SET_SOURCE_FILES_PROPERTIES(${TEST_HEADERS}
+  PROPERTIES HEADER_ONLY TRUE
+  )
+
 CONFIGURE_FILE(
   ${CMAKE_CURRENT_SOURCE_DIR}/test-config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/test-config.h
@@ -81,7 +91,7 @@ CREATE_TEST_SOURCELIST(Tests icetTests_mpi.c ${MyTests}
   EXTRA_INCLUDE mpi_comm.h
   FUNCTION init_mpi_comm)
 
-ADD_EXECUTABLE(icetTests_mpi ${Tests} ${UTIL_SRCS})
+ADD_EXECUTABLE(icetTests_mpi ${Tests} ${UTIL_SRCS} ${TEST_HEADERS})
 TARGET_LINK_LIBRARIES(icetTests_mpi
   IceTCore
   IceTMPI

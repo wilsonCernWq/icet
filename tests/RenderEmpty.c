@@ -6,7 +6,7 @@
 ** This source code is released under the New BSD License.
 **
 ** This tests the ICET_RENDER_EMPTY_IMAGES option. It makes sure that the
-** render callback is invoked even if the option and on and not if the option
+** render callback is invoked even if the option is on and not if the option
 ** is off.
 *****************************************************************************/
 
@@ -170,7 +170,7 @@ static int RenderEmptyCheckImage(const IceTImage image)
                               g_background_color[1],
                               g_background_color[2],
                               g_background_color[3]);
-                    return ICET_FALSE;
+                    return TEST_FAILED;
                 }
             }
         }
