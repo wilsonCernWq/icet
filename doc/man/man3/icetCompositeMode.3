@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:54 MDT 2011
+.\" Manual page created with latex2man on Fri Sep 26 14:31:02 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetCompositeMode" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetCompositeMode" "3" "September 26, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetCompositeMode \-\- set the type of operation used for compositing\fP
@@ -91,11 +91,11 @@ None.
 \fBicetCompositeMode\fP
 will let you set a mode even if it is 
 incompatible with other current settings. Some settings will be checked 
-during a call to \fBicetDrawFrame\fP\&.
-For example, if the image 
-format (specified with \fBicetSetColorFormat\fPand \fBicetSetDepthFormat\fP)does 
-not support the composite mode picked, you will get an error during the 
-call to \fBicetDrawFrame\fP\&.
+during a call to \fBicetDrawFrame\fP
+or \fBicetCompositeImage\fP\&.
+For example, if the image format (specified with \fBicetSetColorFormat\fPand 
+\fBicetSetDepthFormat\fP)does not support the composite mode picked, you will 
+get an error during the call to \fBicetDrawFrame\fP\&.
 .PP
 Other incompatibilities are also not checked. For example, if the 
 composite mode is set to \fBICET_COMPOSITE_MODE_BLEND\fP,

@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:56 MDT 2011
+.\" Manual page created with latex2man on Mon Sep 22 15:51:54 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetSetColorFormat" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetSetColorFormat" "3" "September 22, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetSetColorFormat\fP,\fBicetSetDepthFormat\fP\-\- specifies the buffer formats for \fBIceT \fPto use when creating images 
@@ -41,6 +41,8 @@ and of images
 returned from frame drawing functions (\fBicetDrawFrame\fP
 or 
 \fBicetGLDrawFrame\fP).
+It is also the format expected for image 
+buffers passed to \fBicetCompositeImage\fP\&.
 .PP
 The following \fIcolor_format\fPs
 are valid for use in 
@@ -114,10 +116,12 @@ Calling either \fBicetSetColorFormat\fPor \fBicetSetDepthFormat\fPdoes \fInot\fP
 change the format of any existing images. It only changes any 
 subsequently created images. 
 .PP
-The color format must be set before calling either \fBicetDrawFrame\fP
-or \fBicetGLDrawFrame\fP\&.
-Doing otherwise would create inconsistencies 
-in the images created and composed together. 
+The color format must be set before calling \fBicetDrawFrame\fP,
+\fBicetGLDrawFrame\fP,
+or \fBicetCompositeImage\fP\&.
+Doing otherwise 
+would create inconsistencies in the images created and composited 
+together. 
 .PP
 .SH Copyright
 

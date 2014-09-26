@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:55 MDT 2011
+.\" Manual page created with latex2man on Fri Sep 26 14:31:03 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetGLDrawFrame" "3" "September 20, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetGLDrawFrame" "3" "September 26, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetGLDrawFrame \-\- renders and composites a frame using \fbOpenGL \fP\fP
@@ -86,8 +86,10 @@ tile.
 .PP
 .TP
 \fBICET_INVALID_OPERATION\fP
- Raised if the drawing callback has not been set. Also can be raised if 
-\fBicetDrawFrame\fP
+ Raised if the \fBicetGLInitialize\fP
+has not been called or if the 
+drawing callback has not been set. Also can be raised if 
+\fBicetGLDrawFrame\fP
 is called recursively, probably from within the 
 drawing callback. 
 .TP
