@@ -1044,7 +1044,7 @@ void icetImageCopyPixels(const IceTImage in_image, IceTSizeType in_offset,
         const IceTByte *in_colors;  /* Use IceTByte for pointer arithmetic */
         IceTByte *out_colors;
         IceTSizeType pixel_size;
-        in_colors = icetImageGetColorVoid(in_image, &pixel_size);
+        in_colors = icetImageGetColorConstVoid(in_image, &pixel_size);
         out_colors = icetImageGetColorVoid(out_image, NULL);
         memcpy(out_colors + pixel_size*out_offset,
                in_colors + pixel_size*in_offset,
@@ -1055,7 +1055,7 @@ void icetImageCopyPixels(const IceTImage in_image, IceTSizeType in_offset,
         const IceTByte *in_depths;  /* Use IceTByte for pointer arithmetic */
         IceTByte *out_depths;
         IceTSizeType pixel_size;
-        in_depths = icetImageGetDepthVoid(in_image, &pixel_size);
+        in_depths = icetImageGetDepthConstVoid(in_image, &pixel_size);
         out_depths = icetImageGetDepthVoid(out_image, NULL);
         memcpy(out_depths + pixel_size*out_offset,
                in_depths + pixel_size*in_offset,
@@ -1088,7 +1088,7 @@ void icetImageCopyRegion(const IceTImage in_image,
     if (color_format != ICET_IMAGE_COLOR_NONE) {
         IceTSizeType pixel_size;
         /* Use IceTByte for byte-based pointer arithmetic. */
-        const IceTByte *src = icetImageGetColorVoid(in_image, &pixel_size);
+        const IceTByte *src = icetImageGetColorConstVoid(in_image, &pixel_size);
         IceTByte *dest = icetImageGetColorVoid(out_image, &pixel_size);
         IceTSizeType y;
 
@@ -1110,7 +1110,7 @@ void icetImageCopyRegion(const IceTImage in_image,
     if (depth_format != ICET_IMAGE_DEPTH_NONE) {
         IceTSizeType pixel_size;
         /* Use IceTByte for byte-based pointer arithmetic. */
-        const IceTByte *src = icetImageGetDepthVoid(in_image, &pixel_size);
+        const IceTByte *src = icetImageGetDepthConstVoid(in_image, &pixel_size);
         IceTByte *dest = icetImageGetDepthVoid(out_image, &pixel_size);
         IceTSizeType y;
 
@@ -1305,13 +1305,26 @@ IceTImage icetImageUnpackageFromReceive(IceTVoid *buffer)
         return image;
     }
 
-    if (    icetImageBufferSizeType(color_format, depth_format,
-                                    icetImageGetWidth(image),
-                                    icetImageGetHeight(image))
-         != ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX] ) {
-        icetRaiseError("Inconsistent sizes in image data.", ICET_INVALID_VALUE);
-        image.opaque_internals = NULL;
-        return image;
+    if (magic_number == ICET_IMAGE_MAGIC_NUM) {
+        IceTSizeType buffer_size =
+                ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX];
+        if (   icetImageBufferSizeType(color_format, depth_format,
+                                       icetImageGetWidth(image),
+                                       icetImageGetHeight(image))
+            != buffer_size ) {
+            icetRaiseError("Inconsistent sizes in image data.", ICET_INVALID_VALUE);
+            image.opaque_internals = NULL;
+            return image;
+        }
+    } else {
+        IceTSizeType buffer_size =
+                ICET_IMAGE_HEADER(image)[ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX];
+        if (buffer_size != -1) {
+            icetRaiseError("Size information not consistent with image type.",
+                           ICET_INVALID_VALUE);
+            image.opaque_internals = NULL;
+            return image;
+        }
     }
 
   /* The source may have used a bigger buffer than allocated here at the
@@ -2718,36 +2731,15 @@ static IceTImage prerenderedTile(int tile,
     contained_viewport = icetUnsafeStateGetInteger(ICET_CONTAINED_VIEWPORT);
     tile_viewport = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS) + 4*tile;
 
-    /* Start with the tile viewport. */
-    screen_viewport[0] = tile_viewport[0];
-    screen_viewport[1] = tile_viewport[1];
-    screen_viewport[2] = tile_viewport[2];
-    screen_viewport[3] = tile_viewport[3];
+    /* The screen viewport is the intersection of the tile viewport with the
+     * contained viewport. */
+    icetIntersectViewports(tile_viewport, contained_viewport, screen_viewport);
 
-    target_viewport[0] = target_viewport[1] = 0;
-
-    /* Clip by the contained viewport. */
-    if (contained_viewport[0] > screen_viewport[0]) {
-        IceTInt diff = contained_viewport[0] - screen_viewport[0];
-        screen_viewport[0] = contained_viewport[0];
-        target_viewport[0] = diff;
-        screen_viewport[2] -= diff;
-        if (screen_viewport[2] < 0) { screen_viewport[2] = 0; }
-    }
-    if (contained_viewport[2] < screen_viewport[2]) {
-        screen_viewport[2] = contained_viewport[2];
-    }
-    if (contained_viewport[1] > screen_viewport[1]) {
-        IceTInt diff = contained_viewport[1] - screen_viewport[1];
-        screen_viewport[1] = contained_viewport[1];
-        target_viewport[1] = diff;
-        screen_viewport[3] -= diff;
-        if (screen_viewport[3] < 0) { screen_viewport[3] = 0; }
-    }
-    if (contained_viewport[3] < screen_viewport[3]) {
-        screen_viewport[3] = contained_viewport[3];
-    }
-
+    /* The target viewport is the same width-height as the screen viewport.
+     * It is offset by the same amount the screen viewport is offset from the
+     * tile viewport. */
+    target_viewport[0] = screen_viewport[0] - tile_viewport[0];
+    target_viewport[1] = screen_viewport[1] - tile_viewport[1];
     target_viewport[2] = screen_viewport[2];
     target_viewport[3] = screen_viewport[3];
 

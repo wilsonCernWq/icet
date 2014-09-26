@@ -50,6 +50,7 @@ SET(MyTests
   MaxImageSplit.c
   OddImageSizes.c
   OddProcessCounts.c
+  PreRender.c
   RadixkUnitTests.c
   RenderEmpty.c
   SimpleTiming.c

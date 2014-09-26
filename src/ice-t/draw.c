@@ -13,6 +13,7 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevImage.h>
 #include <IceTDevMatrix.h>
+#include <IceTDevProjections.h>
 #include <IceTDevState.h>
 #include <IceTDevStrategySelect.h>
 #include <IceTDevTiming.h>
@@ -635,22 +636,9 @@ static void drawProjectBounds(void)
          * viewport with that one. */
         const IceTInt *rendered_viewport =
                 icetUnsafeStateGetInteger(ICET_RENDERED_VIEWPORT);
-        if (rendered_viewport[0] > contained_viewport[0]) {
-            contained_viewport[2] -= rendered_viewport[0]-contained_viewport[0];
-            if (contained_viewport[2] < 0) { contained_viewport[2] = 0; }
-            contained_viewport[0] = rendered_viewport[0];
-        }
-        if (rendered_viewport[2] < contained_viewport[2]) {
-            contained_viewport[2] = rendered_viewport[2];
-        }
-        if (rendered_viewport[1] > contained_viewport[1]) {
-            contained_viewport[3] -= rendered_viewport[1]-contained_viewport[1];
-            if (contained_viewport[3] < 0) { contained_viewport[3] = 0; }
-            contained_viewport[1] = rendered_viewport[1];
-        }
-        if (rendered_viewport[3] < contained_viewport[3]) {
-            contained_viewport[3] = rendered_viewport[3];
-        }
+        icetIntersectViewports(rendered_viewport,
+                               contained_viewport,
+                               contained_viewport);
     }
 
     /* Now use this information to figure out which tiles need to be

@@ -118,7 +118,7 @@ static void RenderFloatingViewport(const IceTDouble *projection_matrix,
     }
 }
 
-static void FloatingViewportSetupRender()
+static void FloatingViewportSetupRender(void)
 {
     icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
     icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_FLOAT);
@@ -213,7 +213,7 @@ static IceTBoolean FloatingViewportCheckImage(const IceTImage image)
     return ICET_TRUE;
 }
 
-static IceTBoolean FloatingViewportTryRender()
+static IceTBoolean FloatingViewportTryRender(void)
 {
     IceTDouble projection_matrix[16];
     IceTDouble modelview_matrix[16];
@@ -237,7 +237,7 @@ static IceTBoolean FloatingViewportTryRender()
     return FloatingViewportCheckImage(image);
 }
 
-static int FloatingViewportTryMultipleRenders()
+static int FloatingViewportTryMultipleRenders(void)
 {
     IceTBoolean success = ICET_TRUE;
     IceTInt trial;
