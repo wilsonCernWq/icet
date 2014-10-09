@@ -23,9 +23,10 @@ extern "C" {
 #define ICET_SRC_ON_TOP         ICET_TRUE
 #define ICET_DEST_ON_TOP        ICET_FALSE
 
-ICET_EXPORT IceTImage       icetGetStateBufferImage(IceTEnum pname,
-                                                    IceTSizeType width,
-                                                    IceTSizeType height);
+ICET_EXPORT IceTImage icetGetStateBufferImage(IceTEnum pname,
+                                              IceTSizeType width,
+                                              IceTSizeType height);
+ICET_EXPORT IceTImage icetRetrieveStateImage(IceTEnum pname);
 ICET_EXPORT IceTSizeType icetImageBufferSize(IceTSizeType width,
                                              IceTSizeType height);
 ICET_EXPORT IceTSizeType icetImageBufferSizeType(IceTEnum color_format,
@@ -35,6 +36,17 @@ ICET_EXPORT IceTSizeType icetImageBufferSizeType(IceTEnum color_format,
 ICET_EXPORT IceTImage icetImageAssignBuffer(IceTVoid *buffer,
                                             IceTSizeType width,
                                             IceTSizeType height);
+ICET_EXPORT IceTImage icetGetStatePointerImage(IceTEnum pname,
+                                               IceTSizeType width,
+                                               IceTSizeType height,
+                                               const IceTVoid *color_buffer,
+                                               const IceTVoid *depth_buffer);
+ICET_EXPORT IceTSizeType icetImagePointerBufferSize(void);
+ICET_EXPORT IceTImage icetImagePointerAssignBuffer(IceTVoid *buffer,
+                                                   IceTSizeType width,
+                                                   IceTSizeType height,
+                                                   const IceTVoid *color_buf,
+                                                   const IceTVoid *depth_buf);
 ICET_EXPORT void icetImageAdjustForOutput(IceTImage image);
 ICET_EXPORT void icetImageAdjustForInput(IceTImage image);
 ICET_EXPORT void icetImageSetDimensions(IceTImage image,

@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:56 MDT 2011
+.\" Manual page created with latex2man on Fri Sep 26 14:31:04 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetStrategy" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetStrategy" "3" "September 26, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetStrategy \-\- set the strategy used to composite images.\fP
@@ -33,7 +33,9 @@ images. The algorithm to use is determined by selecting a
 \fIstrategy\fP\&.
 The strategy is selected with \fBicetStrategy\fP\&.
 A 
-strategy must be selected before \fBicetDrawFrame\fP
+strategy must be selected before \fBicetDrawFrame\fP,
+\fBicetCompositeImage\fP,
+or \fBicetGLDrawFrame\fP
 is called. 
 .PP
 A strategy is chosen from one of the following provided enumerated 
@@ -141,8 +143,10 @@ This source code is released under the New BSD License.
 .SH See Also
 
 .PP
+\fIicetCompositeImage\fP(3),
 \fIicetDrawFrame\fP(3),
-\fIicetGetStrategyName\fP(3)
+\fIicetGetStrategyName\fP(3),
+\fIicetGLDrawFrame\fP(3),
 \fIicetSingleImageStrategy\fP(3)
 .PP
 .\" NOTE: This file is generated, DO NOT EDIT.

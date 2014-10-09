@@ -198,11 +198,13 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
 
   /* This is convenient code to attach a debugger to a particular process at the
      start of a test. */
-    /* if (rank == 0) { */
-    /*     int i = 0; */
-    /*     printf("Waiting in process %d\n", getpid()); */
-    /*     while (i == 0) sleep(1); */
-    /* } */
+#if 0
+    if (rank == 0) {
+        int i = 0;
+        printf("Waiting in process %d\n", getpid());
+        while (i == 0) sleep(1);
+    }
+#endif
 
 #ifdef ICET_TESTS_USE_GLUT
   /* Let Glut have first pass at the arguments to grab any that it can use. */

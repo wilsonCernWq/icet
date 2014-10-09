@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:54 MDT 2011
+.\" Manual page created with latex2man on Fri Sep 26 14:31:02 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetDrawFrame" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetDrawFrame" "3" "September 22, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetDrawFrame \-\- renders and composites a frame\fP
@@ -68,16 +68,32 @@ to \fBicetDrawFrame\fP
 and 
 then use the version passed to the drawing callback. 
 .PP
+The \fIbackground_color\fP
+argument specifies the desired background 
+color for the image. It is given as an array of 4 floating point values 
+specifying, in order, the red, green, blue, and alpha channels of the 
+color in the range from 0.0 to 1.0\&. 
+.PP
+When rendering using a depth buffer, the background color is used to fill 
+in empty regions of images. When rendering using color blending, the 
+background color is changed to transparent black during rendering to 
+prevent the background from being blended multiple times from different 
+renderings. If the \fBICET_CORRECT_COLORED_BACKGROUND\fP
+feature is 
+enabled, this background color is blended back into the final composited 
+image. 
+.PP
 .SH Return Value
 
 .PP
 On each .igdisplay processdisplay
 process (as defined by 
-\fBicetAddTile\fP,
+\fBicetAddTile\fP),
 \fBicetDrawFrame\fP
-returns an image of the fully 
-composited image. The contents of the image are undefined for any 
-non\-display process. 
+returns the fully composited 
+image in an \fBIceTImage\fP
+object. The contents of the image are 
+undefined for any non\-display process. 
 .PP
 If the \fBICET_COMPOSITE_ONE_BUFFER\fP
 option is on and both a color 
@@ -90,18 +106,17 @@ might save some time by not transferring depth information at the latter
 stage of compositing. 
 .PP
 The returned image uses memory buffers that will be reclaimed the next 
-time \fBIceT \fPrenders a frame. Do not use this image after the next call to 
-\fBicetDrawFrame\fP
-(unless you have changed the \fBIceT \fPcontext). 
+time \fBIceT \fPrenders or composites a frame. Do not use this image after 
+the next call to \fBicetDrawFrame\fP
+(unless you have changed the \fBIceT \fP
+context). 
 .PP
 .SH Errors
 
 .PP
 .TP
 \fBICET_INVALID_OPERATION\fP
- Raised if the \fBicetGLInitialize\fP
-has not been called or if the 
-drawing callback has not been set. Also can be raised if 
+ Raised if the drawing callback has not been set. Also can be raised if 
 \fBicetDrawFrame\fP
 is called recursively, probably from within the 
 drawing callback. 
@@ -128,7 +143,7 @@ requested. This
 can be corrected by blending the returned image over the desired 
 background. This will be done for you if the 
 \fBICET_CORRECT_COLORED_BACKGROUND\fP
-is on. 
+feature is enabled. 
 .PP
 .SH Copyright
 
@@ -145,6 +160,7 @@ This source code is released under the New BSD License.
 \fIicetAddTile\fP(3),
 \fIicetBoundingBox\fP(3),
 \fIicetBoundingVertices\fP(3),
+\fIicetCompositeImage\fP(3),
 \fIicetDrawCallback\fP(3),
 \fIicetGLDrawFrame\fP(3),
 \fIicetSingleImageStrategy\fP(3),

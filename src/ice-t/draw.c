@@ -13,6 +13,7 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevImage.h>
 #include <IceTDevMatrix.h>
+#include <IceTDevProjections.h>
 #include <IceTDevState.h>
 #include <IceTDevStrategySelect.h>
 #include <IceTDevTiming.h>
@@ -159,6 +160,43 @@ void icetDataReplicationGroupColor(IceTInt color)
     }
 
     icetDataReplicationGroup(size, mygroup);
+}
+
+static void drawUseMatrices(const IceTDouble *projection_matrix,
+                            const IceTDouble *modelview_matrix)
+{
+    if ((projection_matrix != NULL) && (modelview_matrix != NULL)) {
+        icetStateSetDoublev(ICET_PROJECTION_MATRIX, 16, projection_matrix);
+        icetStateSetDoublev(ICET_MODELVIEW_MATRIX, 16, modelview_matrix);
+    } else {
+        IceTDouble identity[16];
+        icetMatrixIdentity(identity);
+        if (projection_matrix == NULL) {
+            icetStateSetDoublev(ICET_PROJECTION_MATRIX, 16, identity);
+        } else {
+            icetRaiseWarning("Drawing with a projection matrix but no "
+                             "modelview matrix. Confused on what to do.",
+                             ICET_INVALID_VALUE);
+            icetStateSetDoublev(ICET_PROJECTION_MATRIX, 16, projection_matrix);
+        }
+        if (modelview_matrix == NULL) {
+            icetStateSetDoublev(ICET_MODELVIEW_MATRIX, 16, identity);
+        } else {
+            icetRaiseWarning("Drawing with a modelview matrix but no "
+                             "projection matrix. Confused on what to do.",
+                             ICET_INVALID_VALUE);
+            icetStateSetDoublev(ICET_MODELVIEW_MATRIX, 16, projection_matrix);
+        }
+        if (*icetUnsafeStateGetInteger(ICET_NUM_BOUNDING_VERTS) != 0) {
+            icetRaiseWarning(
+                        "Geometry bounds were given (with icetBoundingBox or icetBoundingVertices)\n"
+                        "but projection matrices not given to icetCompositeImage. Clearing out the\n"
+                        "bounding information. (Use icetBoundingVertices(0, ICET_VOID, 0, 0, NULL)\n"
+                        "to avoid this error.)",
+                        ICET_INVALID_VALUE);
+            icetBoundingVertices(0, ICET_VOID, 0, 0, NULL);
+        }
+    }
 }
 
 static IceTFloat black[] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -581,29 +619,36 @@ static void drawProjectBounds(void)
                                         sizeof(IceTBoolean)*num_tiles);
 
     if (num_bounding_verts < 1) {
-        /* User never set bounding vertices.  Assume image covers all tiles. */
-        IceTInt i;
-        for (i = 0; i < num_tiles; i++) {
-            contained_list[i] = i;
-            contained_mask[i] = 1;
-        }
+        /* User never set bounding vertices. Assume image covers global
+         * viewport. */
         icetGetIntegerv(ICET_GLOBAL_VIEWPORT, contained_viewport);
         znear = -1.0;
         zfar = 1.0;
-        num_contained = num_tiles;
     } else {
       /* Figure out how the geometry projects onto the display. */
         drawFindContainedViewport(contained_viewport, &znear, &zfar);
-
-      /* Now use this information to figure out which tiles need to be
-         drawn. */
-        drawDetermineContainedTiles(contained_viewport,
-                                    znear,
-                                    zfar,
-                                    contained_list,
-                                    contained_mask,
-                                    &num_contained);
     }
+
+    if (   icetUnsafeStateGetBoolean(ICET_PRE_RENDERED)[0]
+        && (icetStateGetNumEntries(ICET_RENDERED_VIEWPORT) == 4) ) {
+        /* If we are using a pre-rendered image (from icetCompositeImage) and
+         * a valid pixels viewport was given, then clip the current contained
+         * viewport with that one. */
+        const IceTInt *rendered_viewport =
+                icetUnsafeStateGetInteger(ICET_RENDERED_VIEWPORT);
+        icetIntersectViewports(rendered_viewport,
+                               contained_viewport,
+                               contained_viewport);
+    }
+
+    /* Now use this information to figure out which tiles need to be
+       drawn. */
+    drawDetermineContainedTiles(contained_viewport,
+                                znear,
+                                zfar,
+                                contained_list,
+                                contained_mask,
+                                &num_contained);
 
     icetRaiseDebug4("contained_viewport = %d %d %d %d",
                     (int)contained_viewport[0], (int)contained_viewport[1],
@@ -631,6 +676,18 @@ static void drawCollectTileInformation(void)
     IceTBoolean *all_contained_masks;
     IceTInt num_proc;
     IceTInt num_tiles;
+
+    {
+        IceTEnum strategy;
+        icetGetEnumv(ICET_STRATEGY, &strategy);
+
+        /* This function performs allgathers to collect information about
+         * all tiles on all processes, which IceT strategies need to cull
+         * out unused tiles and set up communication patterns. However,
+         * the sequential strategy ignores this information and just uses
+         * all processes for all tiles, so we can skip this step. */
+        if (strategy == ICET_STRATEGY_SEQUENTIAL) { return; }
+    }
 
     icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
     icetGetIntegerv(ICET_NUM_TILES, &num_tiles);
@@ -680,7 +737,8 @@ static IceTImage drawInvokeStrategy(void)
     IceTInt valid_tile;
 
     icetGetPointerv(ICET_DRAW_FUNCTION, &value);
-    if (value == NULL) {
+    if (   (value == NULL)
+        && !icetUnsafeStateGetBoolean(ICET_PRE_RENDERED)[0]) {
         icetRaiseError("Drawing function not set.  Call icetDrawCallback.",
                        ICET_INVALID_OPERATION);
         return icetImageNull();
@@ -728,9 +786,9 @@ static IceTImage drawInvokeStrategy(void)
     return image;
 }
 
-IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
-                        const IceTDouble *modelview_matrix,
-                        const IceTFloat *background_color)
+static IceTImage drawDoFrame(const IceTDouble *projection_matrix,
+                             const IceTDouble *modelview_matrix,
+                             const IceTFloat *background_color)
 {
     IceTInt frame_count;
     IceTImage image;
@@ -738,8 +796,6 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     IceTDouble buf_read_time;
     IceTDouble compose_time;
     IceTDouble total_time;
-
-    icetRaiseDebug("In icetDrawFrame");
 
     {
         IceTBoolean isDrawing;
@@ -754,8 +810,7 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     icetStateResetTiming();
     icetTimingDrawFrameBegin();
 
-    icetStateSetDoublev(ICET_PROJECTION_MATRIX, 16, projection_matrix);
-    icetStateSetDoublev(ICET_MODELVIEW_MATRIX, 16, modelview_matrix);
+    drawUseMatrices(projection_matrix, modelview_matrix);
 
     drawUseBackgroundColor(background_color);
 
@@ -765,21 +820,7 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
 
     drawProjectBounds();
 
-    {
-        IceTEnum strategy;
-        icetGetEnumv(ICET_STRATEGY, &strategy);
-
-        /* drawCollectTileInformation does an allgather to get information
-         * about the tiles in other processes.  These variables are
-         * ICET_ALL_CONTAINED_TILES_MASKS, ICET_TILE_CONTRIB_COUNTS, and
-         * ICET_TOTAL_IMAGE_COUNT.  However, the sequential strategy ignores
-         * this information and just uses all processes for all tiles.  When
-         * compositing a single tile, this is a fine strategy and we can save
-         * a significant proportion of frame time by skipping this step. */
-        if (strategy != ICET_STRATEGY_SEQUENTIAL) {
-            drawCollectTileInformation();
-        }
-    }
+    drawCollectTileInformation();
 
     {
         IceTInt tile_displayed;
@@ -818,4 +859,43 @@ IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
     icetStateCheckMemory();
 
     return image;
+}
+
+IceTImage icetDrawFrame(const IceTDouble *projection_matrix,
+                        const IceTDouble *modelview_matrix,
+                        const IceTFloat *background_color)
+{
+    icetRaiseDebug("In icetDrawFrame");
+
+    icetStateSetBoolean(ICET_PRE_RENDERED, ICET_FALSE);
+
+    return drawDoFrame(projection_matrix, modelview_matrix, background_color);
+}
+
+IceTImage icetCompositeImage(const IceTVoid *color_buffer,
+                             const IceTVoid *depth_buffer,
+                             const IceTInt *valid_pixels_viewport,
+                             const IceTDouble *projection_matrix,
+                             const IceTDouble *modelview_matrix,
+                             const IceTFloat *background_color)
+{
+    IceTInt global_viewport[4];
+
+    icetRaiseDebug("In icetCompositeImage");
+
+    icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+
+    icetStateSetBoolean(ICET_PRE_RENDERED, ICET_TRUE);
+    icetGetStatePointerImage(ICET_RENDER_BUFFER,
+                             global_viewport[2],
+                             global_viewport[3],
+                             color_buffer,
+                             depth_buffer);
+    if (valid_pixels_viewport) {
+        icetStateSetIntegerv(ICET_RENDERED_VIEWPORT, 4, valid_pixels_viewport);
+    } else {
+        icetStateSetIntegerv(ICET_RENDERED_VIEWPORT, 0, NULL);
+    }
+
+    return drawDoFrame(projection_matrix, modelview_matrix, background_color);
 }

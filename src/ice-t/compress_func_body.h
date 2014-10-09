@@ -118,7 +118,7 @@
     if (_composite_mode == ICET_COMPOSITE_MODE_Z_BUFFER) {
         if (_depth_format == ICET_IMAGE_DEPTH_FLOAT) {
           /* Use Z buffer for active pixel testing. */
-            const IceTFloat *_depth = icetImageGetDepthf(INPUT_IMAGE);
+            const IceTFloat *_depth = icetImageGetDepthcf(INPUT_IMAGE);
 #ifdef OFFSET
             _depth += OFFSET;
 #endif
@@ -129,7 +129,7 @@
 #ifdef REGION
                 IceTSizeType _region_count = 0;
 #endif
-                _color = icetImageGetColorui(INPUT_IMAGE);
+                _color = icetImageGetColorcui(INPUT_IMAGE);
 #ifdef OFFSET
                 _color += OFFSET;
 #endif
@@ -171,7 +171,7 @@
 #ifdef REGION
                 IceTSizeType _region_count = 0;
 #endif
-                _color = icetImageGetColorf(INPUT_IMAGE);
+                _color = icetImageGetColorcf(INPUT_IMAGE);
 #ifdef OFFSET
                 _color += 4*(OFFSET);
 #endif
@@ -265,7 +265,7 @@
 #ifdef REGION
             IceTSizeType _region_count = 0;
 #endif
-            _color = icetImageGetColorui(INPUT_IMAGE);
+            _color = icetImageGetColorcui(INPUT_IMAGE);
 #ifdef OFFSET
             _color += OFFSET;
 #endif
@@ -303,7 +303,7 @@
 #ifdef REGION
             IceTSizeType _region_count = 0;
 #endif
-            _color = icetImageGetColorf(INPUT_IMAGE);
+            _color = icetImageGetColorcf(INPUT_IMAGE);
 #ifdef OFFSET
             _color += 4*(OFFSET);
 #endif

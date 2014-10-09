@@ -197,7 +197,6 @@ void icetStateSetDefaults(void)
     icetDisable(ICET_RENDER_EMPTY_IMAGES);
 
     icetStateSetBoolean(ICET_IS_DRAWING_FRAME, 0);
-    icetStateSetBoolean(ICET_RENDER_BUFFER_SIZE, 0);
 
     icetStateSetInteger(ICET_VALID_PIXELS_TILE, -1);
     icetStateSetInteger(ICET_VALID_PIXELS_OFFSET, 0);
@@ -640,6 +639,10 @@ const IceTVoid **icetUnsafeStateGetPointer(IceTEnum pname)
 {
     return icetUnsafeStateGet(pname, ICET_POINTER);
 }
+const IceTVoid *icetUnsafeStateGetBuffer(IceTEnum pname)
+{
+    return icetUnsafeStateGet(pname, ICET_VOID);
+}
 
 IceTDouble *icetStateAllocateDouble(IceTEnum pname, IceTSizeType num_entries)
 {
@@ -664,16 +667,6 @@ IceTVoid **icetStateAllocatePointer(IceTEnum pname, IceTSizeType num_entries)
 
 IceTVoid *icetGetStateBuffer(IceTEnum pname, IceTSizeType num_bytes)
 {
-    if (   (icetStateGetType(pname) == ICET_VOID)
-        && (icetStateGetNumEntries(pname) >= num_bytes) ) {
-      /* A big enough buffer is already allocated. */
-        IceTVoid *buffer = icetUnsafeStateGet(pname, ICET_VOID);
-#ifdef ICET_STATE_CHECK_MEM
-        memset(buffer, 0xDC, num_bytes);
-#endif
-        return buffer;
-    }
-
   /* Check to make sure this state variable has not been used for anything
    * besides a buffer. */
     if (   (icetStateGetType(pname) != ICET_VOID)

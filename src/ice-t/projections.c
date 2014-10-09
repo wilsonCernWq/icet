@@ -18,6 +18,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef MIN
+#define MIN(x, y)       ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y)       ((x) < (y) ? (y) : (x))
+#endif
+
 
 static void update_tile_projections(void);
 
@@ -171,5 +178,38 @@ static void update_tile_projections(void)
         icetGetViewportProject(viewports[tile_idx*4+0], viewports[tile_idx*4+1],
                                viewports[tile_idx*4+2], viewports[tile_idx*4+3],
                                tile_projections + 16*tile_idx);
+    }
+}
+
+void icetIntersectViewports(const IceTInt *src_viewport1,
+                            const IceTInt *src_viewport2,
+                            IceTInt *dest_viewport)
+{
+    const IceTInt min_x1 = src_viewport1[0];
+    const IceTInt max_x1 = min_x1 + src_viewport1[2];
+    const IceTInt min_y1 = src_viewport1[1];
+    const IceTInt max_y1 = min_y1 + src_viewport1[3];
+
+    const IceTInt min_x2 = src_viewport2[0];
+    const IceTInt max_x2 = min_x2 + src_viewport2[2];
+    const IceTInt min_y2 = src_viewport2[1];
+    const IceTInt max_y2 = min_y2 + src_viewport2[3];
+
+    const IceTInt min_x = MAX(min_x1, min_x2);
+    const IceTInt min_y = MAX(min_y1, min_y2);
+    const IceTInt max_x = MIN(max_x1, max_x2);
+    const IceTInt max_y = MIN(max_y1, max_y2);
+
+    const IceTInt width = max_x - min_x;
+    const IceTInt height = max_y - min_y;
+
+    if ((width > 0) && (height > 0)) {
+        dest_viewport[0] = min_x;
+        dest_viewport[1] = min_y;
+        dest_viewport[2] = width;
+        dest_viewport[3] = height;
+    } else {
+        dest_viewport[0] = dest_viewport[1] = -1000000;
+        dest_viewport[2] = dest_viewport[3] = 0;
     }
 }

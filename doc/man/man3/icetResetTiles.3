@@ -1,5 +1,5 @@
 '\" t
-.\" Manual page created with latex2man on Tue Jul 19 13:11:56 MDT 2011
+.\" Manual page created with latex2man on Fri Sep 26 14:31:03 MDT 2014
 .\" NOTE: This file is generated, DO NOT EDIT.
 .de Vb
 .ft CW
@@ -10,7 +10,7 @@
 
 .fi
 ..
-.TH "icetResetTiles" "3" "August  9, 2010" "\fBIceT \fPReference" "\fBIceT \fPReference"
+.TH "icetResetTiles" "3" "September 26, 2014" "\fBIceT \fPReference" "\fBIceT \fPReference"
 .SH NAME
 
 \fBicetResetTiles \-\- clears out all tile definitions.\fP
@@ -63,8 +63,11 @@ None known.
 As a rule, a call to \fBicetResetTiles\fP
 should always be followed 
 with one or more calls to \fBicetAddTile\fP\&.
-\fBicetDrawFrame\fP
-will not work properly if no tiles are in existence. 
+\fBicetDrawFrame\fP,
+\fBicetCompositeImage\fP,
+and \fBicetGLDrawFrame\fP
+will not work 
+properly if no tiles are in existence. 
 .PP
 .SH Copyright
 
