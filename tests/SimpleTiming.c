@@ -93,6 +93,7 @@ static IceTInt g_max_magic_k;
 static IceTBoolean g_do_image_split_study;
 static IceTInt g_min_image_split;
 static IceTBoolean g_do_scaling_study_factor_2;
+static IceTBoolean g_do_scaling_study_factor_2_3;
 
 static float g_color[4];
 
@@ -122,6 +123,10 @@ static void usage(char *argv[])
            "                   splits starting at <num> and doubling each time.\n");
     printstat("  -scaling-study-factor-2 Perform a scaling study for all process counts\n"
               "                that are a factor of 2.\n");
+    printstat("  -scaling-study-factor-2-3 Perform a scaling study that includes all\n"
+              "                process counts that are a factor of 2 plus all process\n"
+              "                counts that are a factor of 3 plus most process counts\n"
+              "                that have factors of 2 and 3.\n");
     printstat("  -h, -help     Print this help message.\n");
     printstat("\nFor general testing options, try -h or -help before test name.\n");
 }
@@ -147,6 +152,7 @@ static void parse_arguments(int argc, char *argv[])
     g_do_image_split_study = ICET_FALSE;
     g_min_image_split = 0;
     g_do_scaling_study_factor_2 = ICET_FALSE;
+    g_do_scaling_study_factor_2_3 = ICET_FALSE;
 
     for (arg = 1; arg < argc; arg++) {
         if (strcmp(argv[arg], "-tilesx") == 0) {
@@ -197,6 +203,8 @@ static void parse_arguments(int argc, char *argv[])
             g_min_image_split = atoi(argv[arg]);
         } else if (strcmp(argv[arg], "-scaling-study-factor-2") == 0) {
             g_do_scaling_study_factor_2 = ICET_TRUE;
+        } else if (strcmp(argv[arg], "-scaling-study-factor-2-3") == 0) {
+            g_do_scaling_study_factor_2_3 = ICET_TRUE;
         } else if (   (strcmp(argv[arg], "-h") == 0)
                    || (strcmp(argv[arg], "-help")) ) {
             usage(argv);
@@ -1082,9 +1090,100 @@ static int SimpleTimingDoScalingStudyFactor2()
     return worst_result;
 }
 
+static int SimpleTimingDoScalingStudyFactor2_3()
+{
+    IceTInt size;
+    IceTInt rank;
+    IceTInt max_power_3;
+    IceTInt min_size = g_num_tiles_x*g_num_tiles_y;
+    IceTContext original_context = icetGetContext();
+    int worst_result = TEST_PASSED;
+
+    worst_result = SimpleTimingDoScalingStudyFactor2();
+
+    icetGetIntegerv(ICET_NUM_PROCESSES, &size);
+    icetGetIntegerv(ICET_RANK, &rank);
+    max_power_3 = 1;
+    while (max_power_3 <= size) { max_power_3 *= 3; }
+    max_power_3 /= 3;
+
+    if ((max_power_3*2 < size) && (max_power_3*2 >= min_size)) {
+        IceTCommunicator new_communicator = MakeCommSubset(max_power_3*2, 0);
+        if (rank < max_power_3*2) {
+            IceTContext new_context = icetCreateContext(new_communicator);
+            int result = SimpleTimingDoParameterStudies();
+            if (result != TEST_PASSED) { worst_result = result; }
+            icetSetContext(original_context);
+            icetDestroyContext(new_context);
+            new_communicator->Destroy(new_communicator);
+        }
+    }
+
+    {
+        // Start with a context with a power of three processes.
+        IceTCommunicator new_comm = MakeCommSubset(max_power_3, 0);
+        if (new_comm == ICET_COMM_NULL) {
+            // This rank is not participating in the rest of the tests.
+            return worst_result;
+        }
+        icetCreateContext(new_comm);
+        new_comm->Destroy(new_comm);
+    }
+
+    if ((max_power_3 < size) && (max_power_3 >= min_size)) {
+        if (rank < max_power_3) {
+            int result = SimpleTimingDoParameterStudies();
+            if (result != TEST_PASSED) { worst_result = result; }
+        }
+    }
+
+    while (ICET_TRUE) {
+        IceTInt last_size;
+        IceTInt last_rank;
+        IceTCommunicator comm_third;
+        IceTCommunicator comm_two_thirds;
+        IceTContext old_context = icetGetContext();
+        int result;
+
+        icetGetIntegerv(ICET_NUM_PROCESSES, &last_size);
+        icetGetIntegerv(ICET_RANK, &last_rank);
+
+        if (last_size%9 != 0) {
+            // Next smallest comms have no factors of 3. Must be only
+            // factors of two, and we have done that.
+            break;
+        }
+
+        // By simple factoring, we can split the last communicator into one
+        // piece a third of its size and another peice 2/3 the size, and
+        // those combined will use all the processes.
+        comm_third = MakeCommSubset(last_size/3, 0);
+        comm_two_thirds = MakeCommSubset(2*last_size/3, last_size/3);
+
+        icetDestroyContext(old_context);
+        if (last_rank < last_size/3) {
+            icetCreateContext(comm_third);
+            comm_third->Destroy(comm_third);
+        } else {
+            icetCreateContext(comm_two_thirds);
+            comm_two_thirds->Destroy(comm_two_thirds);
+        }
+
+        result = SimpleTimingDoParameterStudies();
+        if (result != TEST_PASSED) { worst_result = result; }
+    }
+
+    icetDestroyContext(icetGetContext());
+    icetSetContext(original_context);
+
+    return worst_result;
+}
+
 static int SimpleTimingDoScalingStudies()
 {
-    if (g_do_scaling_study_factor_2) {
+    if (g_do_scaling_study_factor_2_3) {
+        return SimpleTimingDoScalingStudyFactor2_3();
+    } else if (g_do_scaling_study_factor_2) {
         return SimpleTimingDoScalingStudyFactor2();
     } else {
         return SimpleTimingDoParameterStudies();
