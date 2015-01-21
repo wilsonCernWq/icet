@@ -22,6 +22,8 @@ extern "C" {
 /* All of these methods call the associated method in the communicator for
    the current context. */
 ICET_EXPORT IceTCommunicator icetCommDuplicate();
+ICET_EXPORT IceTCommunicator icetCommSubset(int count,
+                                            IceTInt32 *ranks);
 ICET_EXPORT void icetCommBarrier();
 ICET_EXPORT void icetCommSend(const void *buf,
                               IceTSizeType count,

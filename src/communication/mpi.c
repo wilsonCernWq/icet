@@ -29,73 +29,76 @@
 
 #define ICET_MPI_TEMP_BUFFER_0  (ICET_COMMUNICATION_LAYER_START | (IceTEnum)0x00)
 
-static IceTCommunicator Duplicate(IceTCommunicator self);
-static void Destroy(IceTCommunicator self);
-static void Barrier(IceTCommunicator self);
-static void Send(IceTCommunicator self,
-                 const void *buf,
-                 int count,
-                 IceTEnum datatype,
-                 int dest,
-                 int tag);
-static void Recv(IceTCommunicator self,
-                 void *buf,
-                 int count,
-                 IceTEnum datatype,
-                 int src,
-                 int tag);
-static void Sendrecv(IceTCommunicator self,
-                     const void *sendbuf,
-                     int sendcount,
-                     IceTEnum sendtype,
-                     int dest,
-                     int sendtag,
-                     void *recvbuf,
-                     int recvcount,
-                     IceTEnum recvtype,
-                     int src,
-                     int recvtag);
-static void Gather(IceTCommunicator self,
-                   const void *sendbuf,
-                   int sendcount,
-                   IceTEnum datatype,
-                   void *recvbuf,
-                   int root);
-static void Gatherv(IceTCommunicator self,
-                    const void *sendbuf,
-                    int sendcount,
+static IceTCommunicator MPIDuplicate(IceTCommunicator self);
+static IceTCommunicator MPISubset(IceTCommunicator self,
+                                  int count,
+                                  IceTInt32 *ranks);
+static void MPIDestroy(IceTCommunicator self);
+static void MPIBarrier(IceTCommunicator self);
+static void MPISend(IceTCommunicator self,
+                    const void *buf,
+                    int count,
                     IceTEnum datatype,
-                    void *recvbuf,
-                    const int *recvcounts,
-                    const int *recvoffsets,
-                    int root);
-static void Allgather(IceTCommunicator self,
+                    int dest,
+                    int tag);
+static void MPIRecv(IceTCommunicator self,
+                    void *buf,
+                    int count,
+                    IceTEnum datatype,
+                    int src,
+                    int tag);
+static void MPISendrecv(IceTCommunicator self,
+                        const void *sendbuf,
+                        int sendcount,
+                        IceTEnum sendtype,
+                        int dest,
+                        int sendtag,
+                        void *recvbuf,
+                        int recvcount,
+                        IceTEnum recvtype,
+                        int src,
+                        int recvtag);
+static void MPIGather(IceTCommunicator self,
                       const void *sendbuf,
                       int sendcount,
                       IceTEnum datatype,
-                      void *recvbuf);
-static void Alltoall(IceTCommunicator self,
-                     const void *sendbuf,
-                     int sendcount,
-                     IceTEnum datatype,
-                     void *recvbuf);
-static IceTCommRequest Isend(IceTCommunicator self,
-                             const void *buf,
-                             int count,
-                             IceTEnum datatype,
-                             int dest,
-                             int tag);
-static IceTCommRequest Irecv(IceTCommunicator self,
-                             void *buf,
-                             int count,
-                             IceTEnum datatype,
-                             int src,
-                             int tag);
-static void Waitone(IceTCommunicator self, IceTCommRequest *request);
-static int  Waitany(IceTCommunicator self,
-                    int count, IceTCommRequest *array_of_requests);
-static int Comm_size(IceTCommunicator self);
-static int Comm_rank(IceTCommunicator self);
+                      void *recvbuf,
+                      int root);
+static void MPIGatherv(IceTCommunicator self,
+                       const void *sendbuf,
+                       int sendcount,
+                       IceTEnum datatype,
+                       void *recvbuf,
+                       const int *recvcounts,
+                       const int *recvoffsets,
+                       int root);
+static void MPIAllgather(IceTCommunicator self,
+                         const void *sendbuf,
+                         int sendcount,
+                         IceTEnum datatype,
+                         void *recvbuf);
+static void MPIAlltoall(IceTCommunicator self,
+                        const void *sendbuf,
+                        int sendcount,
+                        IceTEnum datatype,
+                        void *recvbuf);
+static IceTCommRequest MPIIsend(IceTCommunicator self,
+                                const void *buf,
+                                int count,
+                                IceTEnum datatype,
+                                int dest,
+                                int tag);
+static IceTCommRequest MPIIrecv(IceTCommunicator self,
+                                void *buf,
+                                int count,
+                                IceTEnum datatype,
+                                int src,
+                                int tag);
+static void MPIWaitone(IceTCommunicator self, IceTCommRequest *request);
+static int  MPIWaitany(IceTCommunicator self,
+                       int count, IceTCommRequest *array_of_requests);
+static int MPIComm_size(IceTCommunicator self);
+static int MPIComm_rank(IceTCommunicator self);
 
 typedef struct IceTMPICommRequestInternalsStruct {
     MPI_Request request;
@@ -189,33 +192,39 @@ static void ErrorHandler(MPI_Comm *comm, int *errorno, ...)
 
 IceTCommunicator icetCreateMPICommunicator(MPI_Comm mpi_comm)
 {
-    IceTCommunicator comm = malloc(sizeof(struct IceTCommunicatorStruct));
+    IceTCommunicator comm;
 #ifdef BREAK_ON_MPI_ERROR
     MPI_Errhandler eh;
 #endif
 
+    if (mpi_comm == MPI_COMM_NULL) {
+        return ICET_COMM_NULL;
+    }
+
+    comm = malloc(sizeof(struct IceTCommunicatorStruct));
     if (comm == NULL) {
         icetRaiseError("Could not allocate memory for IceTCommunicator.",
                        ICET_OUT_OF_MEMORY);
         return NULL;
     }
 
-    comm->Duplicate = Duplicate;
-    comm->Destroy = Destroy;
-    comm->Barrier = Barrier;
-    comm->Send = Send;
-    comm->Recv = Recv;
-    comm->Sendrecv = Sendrecv;
-    comm->Gather = Gather;
-    comm->Gatherv = Gatherv;
-    comm->Allgather = Allgather;
-    comm->Alltoall = Alltoall;
-    comm->Isend = Isend;
-    comm->Irecv = Irecv;
-    comm->Wait = Waitone;
-    comm->Waitany = Waitany;
-    comm->Comm_size = Comm_size;
-    comm->Comm_rank = Comm_rank;
+    comm->Duplicate = MPIDuplicate;
+    comm->Subset = MPISubset;
+    comm->Destroy = MPIDestroy;
+    comm->Barrier = MPIBarrier;
+    comm->Send = MPISend;
+    comm->Recv = MPIRecv;
+    comm->Sendrecv = MPISendrecv;
+    comm->Gather = MPIGather;
+    comm->Gatherv = MPIGatherv;
+    comm->Allgather = MPIAllgather;
+    comm->Alltoall = MPIAlltoall;
+    comm->Isend = MPIIsend;
+    comm->Irecv = MPIIrecv;
+    comm->Wait = MPIWaitone;
+    comm->Waitany = MPIWaitany;
+    comm->Comm_size = MPIComm_size;
+    comm->Comm_rank = MPIComm_rank;
 
     comm->data = malloc(sizeof(MPI_Comm));
     if (comm->data == NULL) {
@@ -243,25 +252,56 @@ IceTCommunicator icetCreateMPICommunicator(MPI_Comm mpi_comm)
 
 void icetDestroyMPICommunicator(IceTCommunicator comm)
 {
-    comm->Destroy(comm);
+    if (comm != ICET_COMM_NULL) {
+        comm->Destroy(comm);
+    }
 }
 
 
 #define MPI_COMM        (*((MPI_Comm *)self->data))
 
-static IceTCommunicator Duplicate(IceTCommunicator self)
+static IceTCommunicator MPIDuplicate(IceTCommunicator self)
 {
-    return icetCreateMPICommunicator(MPI_COMM);
+    if (self != ICET_COMM_NULL) {
+        return icetCreateMPICommunicator(MPI_COMM);
+    } else {
+        return ICET_COMM_NULL;
+    }
 }
 
-static void Destroy(IceTCommunicator self)
+static IceTCommunicator MPISubset(IceTCommunicator self,
+                                  int count,
+                                  IceTInt32 *ranks)
+{
+    MPI_Group original_group;
+    MPI_Group subset_group;
+    MPI_Comm subset_comm;
+    IceTCommunicator result;
+
+    MPI_Comm_group(MPI_COMM, &original_group);
+    MPI_Group_incl(original_group, count, ranks, &subset_group);
+    MPI_Comm_create(MPI_COMM, subset_group, &subset_comm);
+
+    result = icetCreateMPICommunicator(subset_comm);
+
+    if (subset_comm != MPI_COMM_NULL) {
+        MPI_Comm_free(&subset_comm);
+    }
+
+    MPI_Group_free(&subset_group);
+    MPI_Group_free(&original_group);
+
+    return result;
+}
+
+static void MPIDestroy(IceTCommunicator self)
 {
     MPI_Comm_free((MPI_Comm *)self->data);
     free(self->data);
     free(self);
 }
 
-static void Barrier(IceTCommunicator self)
+static void MPIBarrier(IceTCommunicator self)
 {
     MPI_Barrier(MPI_COMM);
 }
@@ -281,41 +321,41 @@ static void Barrier(IceTCommunicator self)
           break;                                                             \
     }
 
-static void Send(IceTCommunicator self,
-                 const void *buf,
-                 int count,
-                 IceTEnum datatype,
-                 int dest,
-                 int tag)
+static void MPISend(IceTCommunicator self,
+                    const void *buf,
+                    int count,
+                    IceTEnum datatype,
+                    int dest,
+                    int tag)
 {
     MPI_Datatype mpidatatype;
     CONVERT_DATATYPE(datatype, mpidatatype);
     MPI_Send((void *)buf, count, mpidatatype, dest, tag, MPI_COMM);
 }
 
-static void Recv(IceTCommunicator self,
-                 void *buf,
-                 int count,
-                 IceTEnum datatype,
-                 int src,
-                 int tag)
+static void MPIRecv(IceTCommunicator self,
+                    void *buf,
+                    int count,
+                    IceTEnum datatype,
+                    int src,
+                    int tag)
 {
     MPI_Datatype mpidatatype;
     CONVERT_DATATYPE(datatype, mpidatatype);
     MPI_Recv(buf, count, mpidatatype, src, tag, MPI_COMM, MPI_STATUS_IGNORE);
 }
 
-static void Sendrecv(IceTCommunicator self,
-                     const void *sendbuf,
-                     int sendcount,
-                     IceTEnum sendtype,
-                     int dest,
-                     int sendtag,
-                     void *recvbuf,
-                     int recvcount,
-                     IceTEnum recvtype,
-                     int src,
-                     int recvtag)
+static void MPISendrecv(IceTCommunicator self,
+                        const void *sendbuf,
+                        int sendcount,
+                        IceTEnum sendtype,
+                        int dest,
+                        int sendtag,
+                        void *recvbuf,
+                        int recvcount,
+                        IceTEnum recvtype,
+                        int src,
+                        int recvtag)
 {
     MPI_Datatype mpisendtype;
     MPI_Datatype mpirecvtype;
@@ -327,12 +367,12 @@ static void Sendrecv(IceTCommunicator self,
                  MPI_STATUS_IGNORE);
 }
 
-static void Gather(IceTCommunicator self,
-                   const void *sendbuf,
-                   int sendcount,
-                   IceTEnum datatype,
-                   void *recvbuf,
-                   int root)
+static void MPIGather(IceTCommunicator self,
+                      const void *sendbuf,
+                      int sendcount,
+                      IceTEnum datatype,
+                      void *recvbuf,
+                      int root)
 {
     MPI_Datatype mpitype;
     CONVERT_DATATYPE(datatype, mpitype);
@@ -356,14 +396,14 @@ static void Gather(IceTCommunicator self,
                MPI_COMM);
 }
 
-static void Gatherv(IceTCommunicator self,
-                    const void *sendbuf,
-                    int sendcount,
-                    IceTEnum datatype,
-                    void *recvbuf,
-                    const int *recvcounts,
-                    const int *recvoffsets,
-                    int root)
+static void MPIGatherv(IceTCommunicator self,
+                       const void *sendbuf,
+                       int sendcount,
+                       IceTEnum datatype,
+                       void *recvbuf,
+                       const int *recvcounts,
+                       const int *recvoffsets,
+                       int root)
 {
     MPI_Datatype mpitype;
     CONVERT_DATATYPE(datatype, mpitype);
@@ -388,11 +428,11 @@ static void Gatherv(IceTCommunicator self,
                 root, MPI_COMM);
 }
 
-static void Allgather(IceTCommunicator self,
-                      const void *sendbuf,
-                      int sendcount,
-                      IceTEnum datatype,
-                      void *recvbuf)
+static void MPIAllgather(IceTCommunicator self,
+                         const void *sendbuf,
+                         int sendcount,
+                         IceTEnum datatype,
+                         void *recvbuf)
 {
     MPI_Datatype mpitype;
     CONVERT_DATATYPE(datatype, mpitype);
@@ -416,11 +456,11 @@ static void Allgather(IceTCommunicator self,
                   MPI_COMM);
 }
 
-static void Alltoall(IceTCommunicator self,
-                     const void *sendbuf,
-                     int sendcount,
-                     IceTEnum datatype,
-                     void *recvbuf)
+static void MPIAlltoall(IceTCommunicator self,
+                        const void *sendbuf,
+                        int sendcount,
+                        IceTEnum datatype,
+                        void *recvbuf)
 {
     MPI_Datatype mpitype;
     CONVERT_DATATYPE(datatype, mpitype);
@@ -430,12 +470,12 @@ static void Alltoall(IceTCommunicator self,
                  MPI_COMM);
 }
 
-static IceTCommRequest Isend(IceTCommunicator self,
-                             const void *buf,
-                             int count,
-                             IceTEnum datatype,
-                             int dest,
-                             int tag)
+static IceTCommRequest MPIIsend(IceTCommunicator self,
+                                const void *buf,
+                                int count,
+                                IceTEnum datatype,
+                                int dest,
+                                int tag)
 {
     IceTCommRequest icet_request;
     MPI_Request mpi_request;
@@ -451,12 +491,12 @@ static IceTCommRequest Isend(IceTCommunicator self,
     return icet_request;
 }
 
-static IceTCommRequest Irecv(IceTCommunicator self,
-                             void *buf,
-                             int count,
-                             IceTEnum datatype,
-                             int src,
-                             int tag)
+static IceTCommRequest MPIIrecv(IceTCommunicator self,
+                                void *buf,
+                                int count,
+                                IceTEnum datatype,
+                                int src,
+                                int tag)
 {
     IceTCommRequest icet_request;
     MPI_Request mpi_request;
@@ -472,7 +512,7 @@ static IceTCommRequest Irecv(IceTCommunicator self,
     return icet_request;
 }
 
-static void Waitone(IceTCommunicator self, IceTCommRequest *icet_request)
+static void MPIWaitone(IceTCommunicator self, IceTCommRequest *icet_request)
 {
     MPI_Request mpi_request;
 
@@ -489,8 +529,8 @@ static void Waitone(IceTCommunicator self, IceTCommRequest *icet_request)
     *icet_request = ICET_COMM_REQUEST_NULL;
 }
 
-static int  Waitany(IceTCommunicator self,
-                    int count, IceTCommRequest *array_of_requests)
+static int  MPIWaitany(IceTCommunicator self,
+                       int count, IceTCommRequest *array_of_requests)
 {
     MPI_Request *mpi_requests;
     int idx;
@@ -520,14 +560,14 @@ static int  Waitany(IceTCommunicator self,
     return idx;
 }
 
-static int Comm_size(IceTCommunicator self)
+static int MPIComm_size(IceTCommunicator self)
 {
     int size;
     MPI_Comm_size(MPI_COMM, &size);
     return size;
 }
 
-static int Comm_rank(IceTCommunicator self)
+static int MPIComm_rank(IceTCommunicator self)
 {
     int rank;
     MPI_Comm_rank(MPI_COMM, &rank);

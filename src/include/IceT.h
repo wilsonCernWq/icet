@@ -50,6 +50,10 @@ struct IceTCommunicatorStruct {
     struct IceTCommunicatorStruct *
          (*Duplicate)(struct IceTCommunicatorStruct *self);
     void (*Destroy)(struct IceTCommunicatorStruct *self);
+    struct IceTCommunicatorStruct *
+         (*Subset)(struct IceTCommunicatorStruct *self,
+                   int count,
+                   IceTInt32 *ranks);
     void (*Barrier)(struct IceTCommunicatorStruct *self);
     void (*Send)(struct IceTCommunicatorStruct *self,
                  const void *buf,
@@ -123,6 +127,7 @@ struct IceTCommunicatorStruct {
 };
 
 typedef struct IceTCommunicatorStruct *IceTCommunicator;
+#define ICET_COMM_NULL ((IceTCommunicator)NULL)
 
 ICET_EXPORT IceTDouble  icetWallTime(void);
 
