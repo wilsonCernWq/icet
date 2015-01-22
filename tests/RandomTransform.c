@@ -341,13 +341,18 @@ static void RandomTransformDoRender(IceTBoolean transparent,
         IceTDouble projection_matrix[16];
         IceTDouble modelview_matrix[16];
         IceTInt physical_viewport[4];
+        IceTInt global_viewport[4];
+        IceTSizeType width;
+        IceTSizeType height;
 
         /* When using draw to render the image directly, we have to change */
         /* a few OpenGL state variables and then restore them. */
         glGetFloatv(GL_COLOR_CLEAR_VALUE, background_color);
         if (transparent) { glClearColor(0.0, 0.0, 0.0, 0.0); }
         glGetIntegerv(GL_VIEWPORT, physical_viewport);
-        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+        width = global_viewport[2]; height = global_viewport[3];
+        glViewport(0, 0, width, height);
         draw();
         glViewport(physical_viewport[0], physical_viewport[1],
                    physical_viewport[2], physical_viewport[3]);
@@ -359,18 +364,17 @@ static void RandomTransformDoRender(IceTBoolean transparent,
         icetGetEnumv(ICET_COLOR_FORMAT, &color_format);
         switch (color_format) {
         case ICET_IMAGE_COLOR_RGBA_UBYTE:
-            color_buffer = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*4);
+            color_buffer = malloc(width*height*4*sizeof(IceTUByte));
             glReadPixels(0, 0,
-                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         width, height,
                          GL_RGBA,
                          GL_UNSIGNED_BYTE,
                          color_buffer);
             break;
         case ICET_IMAGE_COLOR_RGBA_FLOAT:
-            color_buffer
-                    = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*4*sizeof(IceTFloat));
+            color_buffer = malloc(width*height*4*sizeof(IceTFloat));
             glReadPixels(0, 0,
-                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         width, height,
                          GL_RGBA,
                          GL_FLOAT,
                          color_buffer);
@@ -387,9 +391,9 @@ static void RandomTransformDoRender(IceTBoolean transparent,
         icetGetEnumv(ICET_DEPTH_FORMAT, &depth_format);
         switch (depth_format) {
         case ICET_IMAGE_DEPTH_FLOAT:
-            depth_buffer = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(IceTFloat));
+            depth_buffer = malloc(width*height*sizeof(IceTFloat));
             glReadPixels(0, 0,
-                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         width, height,
                          GL_DEPTH_COMPONENT,
                          GL_FLOAT,
                          depth_buffer);
