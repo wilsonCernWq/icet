@@ -856,7 +856,7 @@ const IceTVoid *icetImageGetDepthConstVoid(const IceTImage image,
         return image_data_pointer + color_format_bytes;
     }
     case ICET_IMAGE_POINTERS_MAGIC_NUM:
-        return ((const IceTVoid **)ICET_IMAGE_DATA(image))[0];
+        return ((const IceTVoid **)ICET_IMAGE_DATA(image))[1];
     default:
         icetRaiseError("Detected invalid image header.",
                        ICET_SANITY_CHECK_FAIL);
