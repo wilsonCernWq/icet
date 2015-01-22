@@ -274,33 +274,15 @@ static void check_results(int result)
     }
 }
 
-static void RandomTransformDoRender(IceTBoolean transparent,
-                                    IceTSizeType local_width,
-                                    IceTSizeType local_height)
+static void check_image(IceTImage image,
+                        IceTBoolean transparent,
+                        IceTSizeType local_width,
+                        IceTSizeType local_height)
 {
-    IceTImage image;
     IceTInt rank;
     int result = TEST_PASSED;
 
     icetGetIntegerv(ICET_RANK, &rank);
-
-    printstat("Rendering frame.\n");
-    if (transparent) {
-        glColor4f(0.5f*g_color[0], 0.5f*g_color[1], 0.5f*g_color[2], 0.5f);
-    } else {
-        glColor4f(g_color[0], g_color[1], g_color[2], 1.0f);
-    }
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-1.0f,
-            (GLfloat)((2.0*local_width*g_tile_dim)/SCREEN_WIDTH-1.0),
-            -1.0f,
-            (GLfloat)((2.0*local_height*g_tile_dim)/SCREEN_HEIGHT-1.0),
-            -1.0f, 1.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadMatrixf(g_modelview);
-    image = icetGLDrawFrame();
-    swap_buffers();
 
     if (rank < g_tile_dim*g_tile_dim) {
         if (transparent) {
@@ -326,6 +308,117 @@ static void RandomTransformDoRender(IceTBoolean transparent,
         /* printrank("Not a display node.  Not testing image.\n"); */
     }
     check_results(result);
+}
+
+static void RandomTransformDoRender(IceTBoolean transparent,
+                                    IceTSizeType local_width,
+                                    IceTSizeType local_height)
+{
+    IceTImage image;
+
+    if (transparent) {
+        glColor4f(0.5f*g_color[0], 0.5f*g_color[1], 0.5f*g_color[2], 0.5f);
+    } else {
+        glColor4f(g_color[0], g_color[1], g_color[2], 1.0f);
+    }
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1.0f,
+            (GLfloat)((2.0*local_width*g_tile_dim)/SCREEN_WIDTH-1.0),
+            -1.0f,
+            (GLfloat)((2.0*local_height*g_tile_dim)/SCREEN_HEIGHT-1.0),
+            -1.0f, 1.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(g_modelview);
+
+    printstat("Prerendering frame for composite.\n");
+    {
+        IceTFloat background_color[4];
+        IceTVoid *color_buffer = NULL;
+        IceTVoid *depth_buffer = NULL;
+        IceTEnum color_format;
+        IceTEnum depth_format;
+        IceTDouble projection_matrix[16];
+        IceTDouble modelview_matrix[16];
+        IceTInt physical_viewport[4];
+
+        /* When using draw to render the image directly, we have to change */
+        /* a few OpenGL state variables and then restore them. */
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, background_color);
+        if (transparent) { glClearColor(0.0, 0.0, 0.0, 0.0); }
+        glGetIntegerv(GL_VIEWPORT, physical_viewport);
+        glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        draw();
+        glViewport(physical_viewport[0], physical_viewport[1],
+                   physical_viewport[2], physical_viewport[3]);
+        glClearColor(background_color[0], background_color[1],
+                     background_color[2], background_color[3]);
+        glReadBuffer(GL_BACK);
+        glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+
+        icetGetEnumv(ICET_COLOR_FORMAT, &color_format);
+        switch (color_format) {
+        case ICET_IMAGE_COLOR_RGBA_UBYTE:
+            color_buffer = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*4);
+            glReadPixels(0, 0,
+                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         GL_RGBA,
+                         GL_UNSIGNED_BYTE,
+                         color_buffer);
+            break;
+        case ICET_IMAGE_COLOR_RGBA_FLOAT:
+            color_buffer
+                    = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*4*sizeof(IceTFloat));
+            glReadPixels(0, 0,
+                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         GL_RGBA,
+                         GL_FLOAT,
+                         color_buffer);
+            break;
+        case ICET_IMAGE_COLOR_NONE:
+            /* Do nothing. */
+            break;
+        default:
+            printf("********* Invalid color format 0x%x!\n", color_format);
+            finalize_test(TEST_FAILED);
+            exit(TEST_FAILED);
+        }
+
+        icetGetEnumv(ICET_DEPTH_FORMAT, &depth_format);
+        switch (depth_format) {
+        case ICET_IMAGE_DEPTH_FLOAT:
+            depth_buffer = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*sizeof(IceTFloat));
+            glReadPixels(0, 0,
+                         SCREEN_WIDTH, SCREEN_HEIGHT,
+                         GL_DEPTH_COMPONENT,
+                         GL_FLOAT,
+                         depth_buffer);
+            break;
+        case ICET_IMAGE_DEPTH_NONE:
+            /* Do nothing. */
+            break;
+        default:
+            printf("********* Invalid depth format 0x%x!\n", depth_format);
+            finalize_test(TEST_FAILED);
+            exit(TEST_FAILED);
+        }
+        glGetDoublev(GL_PROJECTION_MATRIX, projection_matrix);
+        glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix);
+        image = icetCompositeImage(color_buffer,
+                                   depth_buffer,
+                                   NULL,
+                                   projection_matrix,
+                                   modelview_matrix,
+                                   background_color);
+        if (color_buffer) { free(color_buffer); }
+        if (depth_buffer) { free(depth_buffer); }
+        check_image(image, transparent, local_width, local_height);
+    }
+
+    printstat("Rendering frame with callbacks.\n");
+    image = icetGLDrawFrame();
+    swap_buffers();
+    check_image(image, transparent, local_width, local_height);
 }
 
 static void RandomTransformTryInterlace(IceTBoolean transparent,
