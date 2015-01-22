@@ -11,6 +11,7 @@
 
 #include <IceTDevCommunication.h>
 #include <IceTDevContext.h>
+#include <IceTDevImage.h>
 #include <IceTDevMatrix.h>
 #include "test-util.h"
 #include "test_codes.h"
@@ -84,6 +85,7 @@ static IceTBoolean g_transparent;
 static IceTBoolean g_colored_background;
 static IceTBoolean g_no_interlace;
 static IceTBoolean g_no_collect;
+static IceTBoolean g_use_callback;
 static IceTBoolean g_sync_render;
 static IceTBoolean g_write_image;
 static IceTEnum g_strategy;
@@ -103,12 +105,13 @@ static void usage(char *argv[])
     printstat("\nWhere  testargs are:\n");
     printstat("  -tilesx <num> Sets the number of tiles horizontal (default 1).\n");
     printstat("  -tilesy <num> Sets the number of tiles vertical (default 1).\n");
-    printstat("  -frames       Sets the number of frames to render (default 2).\n");
+    printstat("  -frames <num> Sets the number of frames to render (default 2).\n");
     printstat("  -seed <num>   Use the given number as the random seed.\n");
     printstat("  -transparent  Render transparent images.  (Uses 4 floats for colors.)\n");
     printstat("  -colored-background Use a color for the background and correct as necessary.\n");
     printstat("  -no-interlace Turn off the image interlacing optimization.\n");
     printstat("  -no-collect   Turn off image collection.\n");
+    printstat("  -use-callback Do the drawing in an IceT callback.\n");
     printstat("  -sync-render  Synchronize rendering by adding a barrier to the draw callback.\n");
     printstat("  -write-image  Write an image on the first frame.\n");
     printstat("  -reduce       Use the reduce strategy (default).\n");
@@ -141,9 +144,10 @@ static void parse_arguments(int argc, char *argv[])
     g_seed = (IceTInt)time(NULL);
     g_transparent = ICET_FALSE;
     g_colored_background = ICET_FALSE;
-    g_sync_render = ICET_FALSE;
     g_no_interlace = ICET_FALSE;
     g_no_collect = ICET_FALSE;
+    g_use_callback = ICET_FALSE;
+    g_sync_render = ICET_FALSE;
     g_write_image = ICET_FALSE;
     g_strategy = ICET_STRATEGY_REDUCE;
     g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_AUTOMATIC;
@@ -175,6 +179,8 @@ static void parse_arguments(int argc, char *argv[])
             g_no_interlace = ICET_TRUE;
         } else if (strcmp(argv[arg], "-no-collect") == 0) {
             g_no_collect = ICET_TRUE;
+        } else if (strcmp(argv[arg], "-use-callback") == 0) {
+            g_use_callback = ICET_TRUE;
         } else if (strcmp(argv[arg], "-sync-render") == 0) {
             g_sync_render = ICET_TRUE;
         } else if (strcmp(argv[arg], "-write-image") == 0) {
@@ -316,8 +322,8 @@ static void draw(const IceTDouble *projection_matrix,
     IceTBoolean success;
     int planeIdx;
     struct hexahedron transformed_box;
-    IceTInt screen_width;
-    IceTInt screen_height;
+    IceTInt width;
+    IceTInt height;
     IceTFloat *colors_float = NULL;
     IceTUByte *colors_byte = NULL;
     IceTFloat *depths = NULL;
@@ -343,8 +349,8 @@ static void draw(const IceTDouble *projection_matrix,
                                  original_plane);
     }
 
-    icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &screen_width);
-    icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &screen_height);
+    width = icetImageGetWidth(result);
+    height = icetImageGetHeight(result);
 
     if (g_transparent) {
         colors_float = icetImageGetColorf(result);
@@ -359,7 +365,7 @@ static void draw(const IceTDouble *projection_matrix,
     for (pixel_y = readback_viewport[1];
          pixel_y < readback_viewport[1] + readback_viewport[3];
          pixel_y++) {
-        ray_origin[1] = (2.0*pixel_y)/screen_height - 1.0;
+        ray_origin[1] = (2.0*pixel_y)/height - 1.0;
         for (pixel_x = readback_viewport[0];
              pixel_x < readback_viewport[0] + readback_viewport[2];
              pixel_x++) {
@@ -370,7 +376,7 @@ static void draw(const IceTDouble *projection_matrix,
             IceTFloat color[4];
             IceTFloat depth;
 
-            ray_origin[0] = (2.0*pixel_x)/screen_width - 1.0;
+            ray_origin[0] = (2.0*pixel_x)/width - 1.0;
 
             intersect_ray_hexahedron(ray_origin,
                                      ray_direction,
@@ -411,16 +417,16 @@ static void draw(const IceTDouble *projection_matrix,
 
             if (g_transparent) {
                 IceTFloat *color_dest
-                    = colors_float + 4*(pixel_y*screen_width + pixel_x);
+                    = colors_float + 4*(pixel_y*width + pixel_x);
                 color_dest[0] = color[0];
                 color_dest[1] = color[1];
                 color_dest[2] = color[2];
                 color_dest[3] = color[3];
             } else {
                 IceTUByte *color_dest
-                    = colors_byte + 4*(pixel_y*screen_width + pixel_x);
+                    = colors_byte + 4*(pixel_y*width + pixel_x);
                 IceTFloat *depth_dest
-                    = depths + pixel_y*screen_width + pixel_x;
+                    = depths + pixel_y*width + pixel_x;
                 color_dest[0] = (IceTUByte)(color[0]*255);
                 color_dest[1] = (IceTUByte)(color[1]*255);
                 color_dest[2] = (IceTUByte)(color[2]*255);
@@ -607,6 +613,161 @@ static void find_composite_order(const IceTDouble *projection,
     free(process_ranks);
 }
 
+/* Finds the viewport of the bounds of the locally rendered geometry. */
+/* This code is stolen from drawFindContainedViewport in draw.c. */
+static void find_contained_viewport(IceTInt contained_viewport[4],
+                                    const IceTDouble projection_matrix[16],
+                                    const IceTDouble modelview_matrix[16])
+{
+    IceTDouble total_transform[16];
+    IceTDouble left, right, bottom, top;
+    IceTDouble *transformed_verts;
+    IceTInt global_viewport[4];
+    IceTInt num_bounding_verts;
+    int i;
+
+    icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+
+    {
+        IceTDouble viewport_matrix[16];
+        IceTDouble tmp_matrix[16];
+
+        /* Strange projection matrix that transforms the x and y of normalized
+           screen coordinates into viewport coordinates that may be cast to
+           integers. */
+        viewport_matrix[ 0] = global_viewport[2];
+        viewport_matrix[ 1] = 0.0;
+        viewport_matrix[ 2] = 0.0;
+        viewport_matrix[ 3] = 0.0;
+
+        viewport_matrix[ 4] = 0.0;
+        viewport_matrix[ 5] = global_viewport[3];
+        viewport_matrix[ 6] = 0.0;
+        viewport_matrix[ 7] = 0.0;
+
+        viewport_matrix[ 8] = 0.0;
+        viewport_matrix[ 9] = 0.0;
+        viewport_matrix[10] = 2.0;
+        viewport_matrix[11] = 0.0;
+
+        viewport_matrix[12] = global_viewport[2] + global_viewport[0]*2.0;
+        viewport_matrix[13] = global_viewport[3] + global_viewport[1]*2.0;
+        viewport_matrix[14] = 0.0;
+        viewport_matrix[15] = 2.0;
+
+        icetMatrixMultiply(tmp_matrix,
+                           (const IceTDouble *)projection_matrix,
+                           (const IceTDouble *)modelview_matrix);
+        icetMatrixMultiply(total_transform,
+                           (const IceTDouble *)viewport_matrix,
+                           (const IceTDouble *)tmp_matrix);
+    }
+
+    icetGetIntegerv(ICET_NUM_BOUNDING_VERTS, &num_bounding_verts);
+    transformed_verts = icetGetStateBuffer(
+                                       ICET_TRANSFORMED_BOUNDS,
+                                       sizeof(IceTDouble)*num_bounding_verts*4);
+
+    /* Transform each vertex to find where it lies in the global viewport and
+       normalized z.  Leave the results in homogeneous coordinates for now. */
+    {
+        const IceTDouble *bound_vert
+            = icetUnsafeStateGetDouble(ICET_GEOMETRY_BOUNDS);
+        for (i = 0; i < num_bounding_verts; i++) {
+            IceTDouble bound_vert_4vec[4];
+            bound_vert_4vec[0] = bound_vert[3*i+0];
+            bound_vert_4vec[1] = bound_vert[3*i+1];
+            bound_vert_4vec[2] = bound_vert[3*i+2];
+            bound_vert_4vec[3] = 1.0;
+            icetMatrixVectorMultiply(transformed_verts + 4*i,
+                                     (const IceTDouble *)total_transform,
+                                     (const IceTDouble *)bound_vert_4vec);
+        }
+    }
+
+    /* Set absolute mins and maxes. */
+    left   = global_viewport[0] + global_viewport[2];
+    right  = global_viewport[0];
+    bottom = global_viewport[1] + global_viewport[3];
+    top    = global_viewport[1];
+
+    /* Now iterate over all the transformed verts and adjust the absolute mins
+       and maxs to include them all. */
+    for (i = 0; i < num_bounding_verts; i++)
+    {
+        IceTDouble *vert = transformed_verts + 4*i;
+
+        /* Check to see if the vertex is in front of the near cut plane.  This
+           is true when z/w >= -1 or z + w >= 0.  The second form is better just
+           in case w is 0. */
+        if (vert[2] + vert[3] >= 0.0) {
+          /* Normalize homogeneous coordinates. */
+            IceTDouble invw = 1.0/vert[3];
+            IceTDouble x = vert[0]*invw;
+            IceTDouble y = vert[1]*invw;
+
+          /* Update contained region. */
+            if (left   > x) left   = x;
+            if (right  < x) right  = x;
+            if (bottom > y) bottom = y;
+            if (top    < y) top    = y;
+        } else {
+          /* The vertex is being clipped by the near plane.  In perspective
+             mode, vertices behind the near clipping plane can sometimes give
+             misleading projections.  Instead, find all the other vertices on
+             the other side of the near plane, compute the intersection of the
+             segment between the two points and the near plane (in homogeneous
+             coordinates) and use that as the projection. */
+            int j;
+            for (j = 0; j < num_bounding_verts; j++) {
+                IceTDouble *vert2 = transformed_verts + 4*j;
+                double t;
+                IceTDouble x, y, invw;
+                if (vert2[2] + vert2[3] < 0.0) {
+                  /* Ignore other points behind near plane. */
+                    continue;
+                }
+              /* Let the two points in question be v_i and v_j.  Define the
+                 segment between them with the parametric equation
+                 p(t) = (vert - vert2)t + vert2.  First, find t where the z and
+                 w coordinates of p(t) sum to zero. */
+                t = (vert2[2]+vert2[3])/(vert2[2]-vert[2] + vert2[3]-vert[3]);
+              /* Use t to find the intersection point.  While we are at it,
+                 normalize the resulting coordinates.  We don't need z because
+                 we know it is going to be -1. */
+                invw = 1.0/((vert[3] - vert2[3])*t + vert2[3] );
+                x = ((vert[0] - vert2[0])*t + vert2[0] ) * invw;
+                y = ((vert[1] - vert2[1])*t + vert2[1] ) * invw;
+
+              /* Update contained region. */
+                if (left   > x) left   = x;
+                if (right  < x) right  = x;
+                if (bottom > y) bottom = y;
+                if (top    < y) top    = y;
+            }
+        }
+    }
+
+    left = floor(left);
+    right = ceil(right);
+    bottom = floor(bottom);
+    top = ceil(top);
+
+  /* Clip bounds to global viewport. */
+    if (left   < global_viewport[0]) left = global_viewport[0];
+    if (right  > global_viewport[0] + global_viewport[2])
+        right  = global_viewport[0] + global_viewport[2];
+    if (bottom < global_viewport[1]) bottom = global_viewport[1];
+    if (top    > global_viewport[1] + global_viewport[3])
+        top    = global_viewport[1] + global_viewport[3];
+
+  /* Use this information to build a containing viewport. */
+    contained_viewport[0] = (IceTInt)left;
+    contained_viewport[1] = (IceTInt)bottom;
+    contained_viewport[2] = (IceTInt)(right - left);
+    contained_viewport[3] = (IceTInt)(top - bottom);
+}
+
 static int SimpleTimingDoRender()
 {
     IceTInt rank;
@@ -621,6 +782,9 @@ static int SimpleTimingDoRender()
 
     IceTDouble projection_matrix[16];
     IceTFloat background_color[4];
+
+    IceTImage pre_rendered_image = icetImageNull();
+    void *pre_rendered_image_buffer = NULL;
 
     timings_type *timing_array;
 
@@ -709,6 +873,20 @@ static int SimpleTimingDoRender()
         return TEST_FAILED;
     }
 
+    if (!g_use_callback) {
+        IceTInt global_viewport[4];
+        IceTInt width, height;
+        IceTInt buffer_size;
+
+        icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+        width = global_viewport[2]; height = global_viewport[3];
+
+        buffer_size = icetImageBufferSize(width, height);
+        pre_rendered_image_buffer = malloc(buffer_size);
+        pre_rendered_image =
+                icetImageAssignBuffer(pre_rendered_image_buffer, width, height);
+    }
+
     icetStrategy(g_strategy);
     icetSingleImageStrategy(g_single_image_strategy);
 
@@ -748,11 +926,6 @@ static int SimpleTimingDoRender()
         IceTDouble modelview_matrix[16];
         IceTImage image;
 
-        /* Get everyone to start at the same time. */
-        icetCommBarrier();
-
-        elapsed_time = icetWallTime();
-
         /* We can set up a modelview matrix here and IceT will factor this in
          * determining the screen projection of the geometry. */
         icetMatrixIdentity(modelview_matrix);
@@ -788,13 +961,50 @@ static int SimpleTimingDoRender()
                                 bounds_max[2] - bounds_min[2]);
         icetMatrixMultiplyTranslate(modelview_matrix, 0.5, 0.5, 0.5);
 
-      /* Instead of calling draw() directly, call it indirectly through
-       * icetDrawFrame().  IceT will automatically handle image
-       * compositing. */
-        g_first_render = ICET_TRUE;
-        image = icetDrawFrame(projection_matrix,
-                              modelview_matrix,
-                              background_color);
+        if (!g_use_callback) {
+            /* Draw the image for the frame. */
+            IceTInt contained_viewport[4];
+            find_contained_viewport(contained_viewport,
+                                    projection_matrix,
+                                    modelview_matrix);
+            if (g_transparent) {
+                IceTFloat black[4] = { 0.0, 0.0, 0.0, 0.0 };
+                draw(projection_matrix,
+                     modelview_matrix,
+                     black,
+                     contained_viewport,
+                     pre_rendered_image);
+            } else {
+                draw(projection_matrix,
+                     modelview_matrix,
+                     background_color,
+                     contained_viewport,
+                     pre_rendered_image);
+            }
+        }
+
+        /* Get everyone to start at the same time. */
+        icetCommBarrier();
+
+        elapsed_time = icetWallTime();
+
+        if (g_use_callback) {
+            /* Instead of calling draw() directly, call it indirectly through
+             * icetDrawFrame().  IceT will automatically handle image
+             * compositing. */
+            g_first_render = ICET_TRUE;
+            image = icetDrawFrame(projection_matrix,
+                                  modelview_matrix,
+                                  background_color);
+        } else {
+            image = icetCompositeImage(
+                        icetImageGetColorConstVoid(pre_rendered_image,NULL),
+                        g_transparent ? NULL : icetImageGetDepthConstVoid(pre_rendered_image,NULL),
+                        NULL,
+                        projection_matrix,
+                        modelview_matrix,
+                        background_color);
+        }
 
         /* Let everyone catch up before finishing the frame. */
         icetCommBarrier();
@@ -916,6 +1126,11 @@ static int SimpleTimingDoRender()
 
     free_region_divide(region_divisions);
     free(timing_array);
+
+    pre_rendered_image = icetImageNull();
+    if (pre_rendered_image_buffer != NULL) {
+        free(pre_rendered_image_buffer);
+    }
 
     /* This is to prevent a non-root from printing while the root is writing
        the log. */
