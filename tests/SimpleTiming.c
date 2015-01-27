@@ -1355,6 +1355,7 @@ static int SimpleTimingDoScalingStudyFactor2_3()
     while (ICET_TRUE) {
         IceTInt last_size;
         IceTInt last_rank;
+        IceTInt this_size;
         IceTCommunicator comm_third;
         IceTCommunicator comm_two_thirds;
         IceTContext old_context = icetGetContext();
@@ -1362,8 +1363,9 @@ static int SimpleTimingDoScalingStudyFactor2_3()
 
         icetGetIntegerv(ICET_NUM_PROCESSES, &last_size);
         icetGetIntegerv(ICET_RANK, &last_rank);
+        this_size = last_size/3;
 
-        if (last_size%9 != 0) {
+        if (this_size%3 != 0) {
             // Next smallest comms have no factors of 3. Must be only
             // factors of two, and we have done that.
             break;
@@ -1372,16 +1374,22 @@ static int SimpleTimingDoScalingStudyFactor2_3()
         // By simple factoring, we can split the last communicator into one
         // piece a third of its size and another peice 2/3 the size, and
         // those combined will use all the processes.
-        comm_third = MakeCommSubset(last_size/3, 0);
-        comm_two_thirds = MakeCommSubset(2*last_size/3, last_size/3);
+        comm_third = MakeCommSubset(this_size, 0);
+        comm_two_thirds = MakeCommSubset(2*this_size, this_size);
 
         icetDestroyContext(old_context);
-        if (last_rank < last_size/3) {
+        if (last_rank < this_size) {
             icetCreateContext(comm_third);
             comm_third->Destroy(comm_third);
         } else {
             icetCreateContext(comm_two_thirds);
             comm_two_thirds->Destroy(comm_two_thirds);
+            this_size *= 2;
+        }
+
+        if (this_size < min_size) {
+            // Group has gotten too small to handle these tiles.
+            break;
         }
 
         result = SimpleTimingDoParameterStudies();
