@@ -1352,6 +1352,25 @@ static int SimpleTimingDoScalingStudyFactor2_3()
         }
     }
 
+    // This loop will run in log_3 iterations selecting any factors of 2 and 3
+    // it finds. Let us say max_power_3 = 3^N. The iterations of the loop
+    // break up the processors is partitions of 1/3 and 2/3 as follows.
+    // (Iteration 0 was just done above.)
+    //
+    // Iteration 0: |---------------------------3^N--------------------------|
+    // Iteration 1: |------3^(N-1)-----|--------------2*3^(N-1)--------------|
+    // Iteration 2: |3^(N-2)|2*3^(N-2)-|-(removed)-|--------4*3^(N-2)--------|
+    // ...
+    //
+    // Note that some of the partitions are removed because they are repeates.
+    // In the example above, the removed partition is of size 2*3^(N-2), which
+    // is the same size of another partition in the tree. In general, when we
+    // break up a partition that is not a power of 3, we only generate the
+    // partition that is 2/3 because the 1/3 partition is created elsewhere.
+    // A partition that is exactly a power of 3 (no factors of 2) has both
+    // subpartitions created.
+    //
+
     while (ICET_TRUE) {
         IceTInt last_size;
         IceTInt last_rank;
@@ -1381,6 +1400,11 @@ static int SimpleTimingDoScalingStudyFactor2_3()
         if (last_rank < this_size) {
             icetCreateContext(comm_third);
             comm_third->Destroy(comm_third);
+            if (this_size%2 == 0) {
+                // If this size already has a factor of two, we can drop it.
+                // See the description above.
+                break;
+            }
         } else {
             icetCreateContext(comm_two_thirds);
             comm_two_thirds->Destroy(comm_two_thirds);
