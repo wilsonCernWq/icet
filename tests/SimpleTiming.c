@@ -37,7 +37,20 @@ struct region_divide_struct {
 
 typedef struct region_divide_struct *region_divide;
 
+#define NAME_SIZE 32
 typedef struct {
+    IceTInt num_proc;
+    char strategy_name[NAME_SIZE];
+    char si_strategy_name[NAME_SIZE];
+    IceTInt num_tiles_x;
+    IceTInt num_tiles_y;
+    IceTInt screen_width;
+    IceTInt screen_height;
+    IceTBoolean transparent;
+    IceTBoolean no_interlace;
+    IceTBoolean no_collect;
+    IceTInt max_image_split;
+    IceTInt frame_number;
     IceTDouble render_time;
     IceTDouble buffer_read_time;
     IceTDouble buffer_write_time;
@@ -46,9 +59,12 @@ typedef struct {
     IceTDouble draw_time;
     IceTDouble composite_time;
     IceTDouble collect_time;
-    IceTInt bytes_sent;
+    IceTInt64 bytes_sent;
     IceTDouble frame_time;
 } timings_type;
+
+static timings_type *g_timing_log;
+static IceTSizeType g_timing_log_size;
 
 /* Array for quick opacity lookups. */
 #define OPACITY_LOOKUP_SIZE 4096
@@ -768,10 +784,106 @@ static void find_contained_viewport(IceTInt contained_viewport[4],
     contained_viewport[3] = (IceTInt)(top - bottom);
 }
 
+static void SimpleTimingCollectAndPrintLog()
+{
+    IceTInt rank;
+    IceTInt num_proc;
+    IceTInt *log_sizes;
+
+    icetGetIntegerv(ICET_RANK, &rank);
+    icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
+
+    /* Collect the number of log entries each process has. */
+    log_sizes = malloc(num_proc*sizeof(IceTInt));
+    icetCommGather(&g_timing_log_size, 1, ICET_SIZE_TYPE, log_sizes, 0);
+
+    if (rank == 0) {
+        timings_type *all_logs;
+        IceTSizeType *data_sizes;
+        IceTSizeType *offsets;
+        IceTInt total_logs;
+        IceTInt proc_index;
+        IceTInt log_index;
+
+        data_sizes = malloc(num_proc*sizeof(IceTSizeType));
+        offsets = malloc(num_proc*sizeof(IceTSizeType));
+
+        total_logs = 0;
+        for (proc_index = 0; proc_index < num_proc; proc_index++) {
+            data_sizes[proc_index] = log_sizes[proc_index]*sizeof(timings_type);
+            offsets[proc_index] = total_logs*sizeof(timings_type);
+            total_logs += log_sizes[proc_index];
+        }
+
+        all_logs = malloc(total_logs*sizeof(timings_type));
+        icetCommGatherv(g_timing_log,
+                        g_timing_log_size*sizeof(timings_type),
+                        ICET_BYTE,
+                        all_logs,
+                        data_sizes,
+                        offsets,
+                        0);
+
+        for (log_index = 0; log_index < total_logs; log_index++) {
+            timings_type *timing = all_logs + log_index;
+            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
+                   timing->num_proc,
+                   timing->strategy_name,
+                   timing->si_strategy_name,
+                   timing->num_tiles_x,
+                   timing->num_tiles_y,
+                   timing->screen_width,
+                   timing->screen_height,
+                   timing->transparent ? "yes" : "no",
+                   timing->no_interlace ? "no" : "yes",
+                   timing->no_collect ? "no" : "yes",
+                   timing->max_image_split,
+                   timing->frame_number,
+                   timing->render_time,
+                   timing->buffer_read_time,
+                   timing->buffer_write_time,
+                   timing->compress_time,
+                   timing->blend_time,
+                   timing->draw_time,
+                   timing->composite_time,
+                   timing->collect_time,
+                   (long int)timing->bytes_sent,
+                   timing->frame_time);
+        }
+
+        free(data_sizes);
+        free(offsets);
+        free(all_logs);
+    } else /* rank != 0 */ {
+        icetCommGatherv(g_timing_log,
+                        g_timing_log_size*sizeof(timings_type),
+                        ICET_BYTE,
+                        NULL,
+                        NULL,
+                        NULL,
+                        0);
+    }
+
+    free(log_sizes);
+
+    if (g_timing_log_size > 0) {
+        free(g_timing_log);
+        g_timing_log = NULL;
+        g_timing_log_size = 0;
+    }
+
+    /* This is to prevent a non-root from printing while the root is writing
+       the log. */
+    icetCommBarrier();
+}
+
 static int SimpleTimingDoRender()
 {
     IceTInt rank;
     IceTInt num_proc;
+    const char *strategy_name;
+    const char *si_strategy_name;
+    IceTInt max_image_split;
 
     float aspect = (  (float)(g_num_tiles_x*SCREEN_WIDTH)
                     / (float)(g_num_tiles_y*SCREEN_HEIGHT) );
@@ -921,6 +1033,20 @@ static int SimpleTimingDoRender()
 
     timing_array = malloc(g_num_frames * sizeof(timings_type));
 
+    strategy_name = icetGetStrategyName();
+    if (g_single_image_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXK) {
+        static char name_buffer[256];
+        IceTInt magic_k;
+
+        icetGetIntegerv(ICET_MAGIC_K, &magic_k);
+        sprintf(name_buffer, "radix-k %d", (int)magic_k);
+        si_strategy_name = name_buffer;
+    } else {
+        si_strategy_name = icetGetSingleImageStrategyName();
+    }
+
+    icetGetIntegerv(ICET_MAX_IMAGE_SPLIT, &max_image_split);
+
     for (frame = 0; frame < g_num_frames; frame++) {
         IceTDouble elapsed_time;
         IceTDouble modelview_matrix[16];
@@ -1011,7 +1137,21 @@ static int SimpleTimingDoRender()
 
         elapsed_time = icetWallTime() - elapsed_time;
 
-        /* Print timings to logging. */
+        /* Record timings to logging. */
+        timing_array[frame].num_proc = num_proc;
+        strncpy(timing_array[frame].strategy_name, strategy_name, NAME_SIZE);
+        timing_array[frame].strategy_name[NAME_SIZE-1] = '\0';
+        strncpy(timing_array[frame].si_strategy_name, si_strategy_name, NAME_SIZE);
+        timing_array[frame].si_strategy_name[NAME_SIZE-1] = '\0';
+        timing_array[frame].num_tiles_x = g_num_tiles_x;
+        timing_array[frame].num_tiles_y = g_num_tiles_y;
+        timing_array[frame].screen_width = SCREEN_WIDTH;
+        timing_array[frame].screen_height = SCREEN_HEIGHT;
+        timing_array[frame].transparent = g_transparent;
+        timing_array[frame].no_interlace = g_no_interlace;
+        timing_array[frame].no_collect = g_no_collect;
+        timing_array[frame].max_image_split = max_image_split;
+        timing_array[frame].frame_number = frame;
         icetGetDoublev(ICET_RENDER_TIME,
                        &timing_array[frame].render_time);
         icetGetDoublev(ICET_BUFFER_READ_TIME,
@@ -1028,8 +1168,8 @@ static int SimpleTimingDoRender()
                        &timing_array[frame].composite_time);
         icetGetDoublev(ICET_COLLECT_TIME,
                        &timing_array[frame].collect_time);
-        icetGetIntegerv(ICET_BYTES_SENT,
-                        &timing_array[frame].bytes_sent);
+        timing_array[frame].bytes_sent
+                = icetUnsafeStateGetInteger(ICET_BYTES_SENT)[0];
         timing_array[frame].frame_time = elapsed_time;
 
         /* Write out image to verify rendering occurred correctly. */
@@ -1046,26 +1186,19 @@ static int SimpleTimingDoRender()
         }
     }
 
-    /* Print logging header. */
+    /* Collect max times and log. */
     {
         timings_type *timing_collection = malloc(num_proc*sizeof(timings_type));
-        const char *strategy_name;
-        const char *si_strategy_name;
-        IceTInt max_image_split;
 
-        strategy_name = icetGetStrategyName();
-        if (g_single_image_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXK) {
-            static char name_buffer[256];
-            IceTInt magic_k;
-
-            icetGetIntegerv(ICET_MAGIC_K, &magic_k);
-            sprintf(name_buffer, "radix-k %d", (int)magic_k);
-            si_strategy_name = name_buffer;
-        } else {
-            si_strategy_name = icetGetSingleImageStrategyName();
+        if (rank == 0) {
+            if (g_timing_log_size == 0) {
+                g_timing_log = malloc(g_num_frames*sizeof(timings_type));
+            } else {
+                g_timing_log = realloc(g_timing_log,
+                                       (g_timing_log_size+g_num_frames)
+                                        *sizeof(timings_type));
+            }
         }
-
-        icetGetIntegerv(ICET_MAX_IMAGE_SPLIT, &max_image_split);
 
         for (frame = 0; frame < g_num_frames; frame++) {
             timings_type *timing = &timing_array[frame];
@@ -1090,34 +1223,13 @@ static int SimpleTimingDoRender()
                     UPDATE_MAX(draw_time);
                     UPDATE_MAX(composite_time);
                     UPDATE_MAX(collect_time);
-                    UPDATE_MAX(bytes_sent);
                     UPDATE_MAX(frame_time);
                     total_bytes_sent += timing_collection[p].bytes_sent;
                 }
+                timing->bytes_sent = total_bytes_sent;
 
-                printf("LOG,%d,%s,%s,%d,%d,%d,%d,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
-                       num_proc,
-                       strategy_name,
-                       si_strategy_name,
-                       g_num_tiles_x,
-                       g_num_tiles_y,
-                       SCREEN_WIDTH,
-                       SCREEN_HEIGHT,
-                       g_transparent ? "yes" : "no",
-                       g_no_interlace ? "no" : "yes",
-                       g_no_collect ? "no" : "yes",
-                       max_image_split,
-                       frame,
-                       timing->render_time,
-                       timing->buffer_read_time,
-                       timing->buffer_write_time,
-                       timing->compress_time,
-                       timing->blend_time,
-                       timing->draw_time,
-                       timing->composite_time,
-                       timing->collect_time,
-                       (long int)total_bytes_sent,
-                       timing->frame_time);
+                g_timing_log[g_timing_log_size] = *timing;
+                g_timing_log_size++;
             }
         }
 
@@ -1131,10 +1243,6 @@ static int SimpleTimingDoRender()
     if (pre_rendered_image_buffer != NULL) {
         free(pre_rendered_image_buffer);
     }
-
-    /* This is to prevent a non-root from printing while the root is writing
-       the log. */
-    icetCommBarrier();
 
     return TEST_PASSED;
 }
@@ -1256,6 +1364,7 @@ static int SimpleTimingDoScalingStudyFactor2()
         int result = SimpleTimingDoParameterStudies();
         if (result != TEST_PASSED) { return result; }
     }
+    SimpleTimingCollectAndPrintLog();
 
     icetGetIntegerv(ICET_NUM_PROCESSES, &size);
     icetGetIntegerv(ICET_RANK, &rank);
@@ -1315,6 +1424,7 @@ static int SimpleTimingDoScalingStudyFactor2_3()
     int worst_result = TEST_PASSED;
 
     worst_result = SimpleTimingDoScalingStudyFactor2();
+    SimpleTimingCollectAndPrintLog();
 
     icetGetIntegerv(ICET_NUM_PROCESSES, &size);
     icetGetIntegerv(ICET_RANK, &rank);
@@ -1332,6 +1442,7 @@ static int SimpleTimingDoScalingStudyFactor2_3()
             icetDestroyContext(new_context);
             new_communicator->Destroy(new_communicator);
         }
+        SimpleTimingCollectAndPrintLog();
     }
 
     {
@@ -1345,11 +1456,20 @@ static int SimpleTimingDoScalingStudyFactor2_3()
         new_comm->Destroy(new_comm);
     }
 
+    if (max_power_3 < 3) {
+        // Corner case where we are running with to few processes to make
+        // any factors. The code below can break, so just bail.
+        icetDestroyContext(icetGetContext());
+        icetSetContext(original_context);
+        return worst_result;
+    }
+
     if ((max_power_3 < size) && (max_power_3 >= min_size)) {
         if (rank < max_power_3) {
             int result = SimpleTimingDoParameterStudies();
             if (result != TEST_PASSED) { worst_result = result; }
         }
+        SimpleTimingCollectAndPrintLog();
     }
 
     // This loop will run in log_3 iterations selecting any factors of 2 and 3
@@ -1428,13 +1548,17 @@ static int SimpleTimingDoScalingStudyFactor2_3()
 
 static int SimpleTimingDoScalingStudies()
 {
+    int result;
     if (g_do_scaling_study_factor_2_3) {
-        return SimpleTimingDoScalingStudyFactor2_3();
+        result = SimpleTimingDoScalingStudyFactor2_3();
     } else if (g_do_scaling_study_factor_2) {
-        return SimpleTimingDoScalingStudyFactor2();
+        result = SimpleTimingDoScalingStudyFactor2();
     } else {
-        return SimpleTimingDoParameterStudies();
+        result = SimpleTimingDoParameterStudies();
     }
+
+    SimpleTimingCollectAndPrintLog();
+    return result;
 }
 
 int SimpleTimingRun()
@@ -1468,6 +1592,9 @@ int SimpleTimingRun()
                "bytes sent,"
                "frame time\n");
     }
+
+    g_timing_log = NULL;
+    g_timing_log_size = 0;
 
     return SimpleTimingDoScalingStudies();
 }
