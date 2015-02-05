@@ -1293,8 +1293,8 @@ static int SimpleTimingDoParameterStudies()
         icetGetIntegerv(ICET_MAGIC_K, &magic_k);
 
         for (image_split = g_min_image_split;
-             image_split/magic_k < num_proc;
-             image_split *= magic_k) {
+             image_split <= num_proc;
+             image_split *= 2) {
             char image_split_string[64];
             int retval;
 
