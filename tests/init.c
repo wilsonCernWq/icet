@@ -77,7 +77,7 @@ static void checkOglError(void)
     case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
-      CASE_ERROR(GL_NO_ERROR);
+      case GL_NO_ERROR: break;
       CASE_ERROR(GL_INVALID_ENUM);
       CASE_ERROR(GL_INVALID_VALUE);
       CASE_ERROR(GL_INVALID_OPERATION);
@@ -104,7 +104,7 @@ static void checkIceTError(void)
     case ename: printrank("## Current IceT error = " #ename "\n"); break;
 
     switch (error) {
-      CASE_ERROR(ICET_NO_ERROR);
+      case ICET_NO_ERROR: break;
       CASE_ERROR(ICET_SANITY_CHECK_FAIL);
       CASE_ERROR(ICET_INVALID_ENUM);
       CASE_ERROR(ICET_BAD_CAST);
