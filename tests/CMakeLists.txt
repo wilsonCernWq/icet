@@ -164,8 +164,9 @@ IF (ICET_TESTS_USE_OPENGL)
   ENDFOREACH(test)
 ENDIF (ICET_TESTS_USE_OPENGL)
 
-IF (WIN32)
-  ADD_CUSTOM_TARGET(logclean erase log.???? *.ppm)
-ELSE (WIN32)
-  ADD_CUSTOM_TARGET(logclean rm -f log.???? *.ppm core.*)
-ENDIF (WIN32)
+ADD_CUSTOM_TARGET(logclean
+  ${CMAKE_COMMAND} -E remove
+    ${CMAKE_CURRENT_BINARY_DIR}/log.????
+    ${CMAKE_CURRENT_BINARY_DIR}/*.ppm
+    ${CMAKE_CURRENT_BINARY_DIR}/core.*
+  )
