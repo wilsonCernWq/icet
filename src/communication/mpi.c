@@ -32,7 +32,7 @@
 static IceTCommunicator MPIDuplicate(IceTCommunicator self);
 static IceTCommunicator MPISubset(IceTCommunicator self,
                                   int count,
-                                  IceTInt32 *ranks);
+                                  const IceTInt32 *ranks);
 static void MPIDestroy(IceTCommunicator self);
 static void MPIBarrier(IceTCommunicator self);
 static void MPISend(IceTCommunicator self,
@@ -271,7 +271,7 @@ static IceTCommunicator MPIDuplicate(IceTCommunicator self)
 
 static IceTCommunicator MPISubset(IceTCommunicator self,
                                   int count,
-                                  IceTInt32 *ranks)
+                                  const IceTInt32 *ranks)
 {
     MPI_Group original_group;
     MPI_Group subset_group;
@@ -279,7 +279,7 @@ static IceTCommunicator MPISubset(IceTCommunicator self,
     IceTCommunicator result;
 
     MPI_Comm_group(MPI_COMM, &original_group);
-    MPI_Group_incl(original_group, count, ranks, &subset_group);
+    MPI_Group_incl(original_group, count, (IceTInt32 *)ranks, &subset_group);
     MPI_Comm_create(MPI_COMM, subset_group, &subset_comm);
 
     result = icetCreateMPICommunicator(subset_comm);

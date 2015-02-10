@@ -53,7 +53,7 @@ struct IceTCommunicatorStruct {
     struct IceTCommunicatorStruct *
          (*Subset)(struct IceTCommunicatorStruct *self,
                    int count,
-                   IceTInt32 *ranks);
+                   const IceTInt32 *ranks);
     void (*Barrier)(struct IceTCommunicatorStruct *self);
     void (*Send)(struct IceTCommunicatorStruct *self,
                  const void *buf,

@@ -34,7 +34,7 @@ IceTCommunicator icetCommDuplicate()
     return comm->Duplicate(comm);
 }
 
-IceTCommunicator icetCommSubset(int count, IceTInt32 *ranks)
+IceTCommunicator icetCommSubset(int count, const IceTInt32 *ranks)
 {
     IceTCommunicator comm = icetGetCommunicator();
     return comm->Subset(comm, count, ranks);
