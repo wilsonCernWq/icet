@@ -10,7 +10,7 @@
 #ifndef _TEST_UTIL_H_
 #define _TEST_UTIL_H_
 
-#include "test-config.h"
+#include "test_config.h"
 
 #ifdef __cplusplus
 extern "C" {

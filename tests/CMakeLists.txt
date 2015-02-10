@@ -71,7 +71,7 @@ SET(UTIL_SRCS init.c ppm.c)
 
 SET(TEST_HEADERS
   test_codes.h
-  test-util.h
+  test_util.h
   mpi_comm.h
   )
 SET_SOURCE_FILES_PROPERTIES(${TEST_HEADERS}
@@ -79,8 +79,8 @@ SET_SOURCE_FILES_PROPERTIES(${TEST_HEADERS}
   )
 
 CONFIGURE_FILE(
-  ${CMAKE_CURRENT_SOURCE_DIR}/test-config.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/test-config.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/test_config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/test_config.h
   )
 
 INCLUDE_DIRECTORIES(

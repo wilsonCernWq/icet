@@ -10,7 +10,7 @@
 *****************************************************************************/
 
 #include "test_codes.h"
-#include "test-util.h"
+#include "test_util.h"
 
 #include <IceTDevImage.h>
 #include <IceTDevState.h>

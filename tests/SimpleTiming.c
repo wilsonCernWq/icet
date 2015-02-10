@@ -13,7 +13,7 @@
 #include <IceTDevContext.h>
 #include <IceTDevImage.h>
 #include <IceTDevMatrix.h>
-#include "test-util.h"
+#include "test_util.h"
 #include "test_codes.h"
 
 #include <stdlib.h>

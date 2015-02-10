@@ -11,7 +11,7 @@
 
 #include <IceT.h>
 #include "test_codes.h"
-#include "test-util.h"
+#include "test_util.h"
 
 #include <IceTDevCommunication.h>
 #include <IceTDevState.h>

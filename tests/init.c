@@ -7,7 +7,7 @@
  * This source code is released under the New BSD License.
  */
 
-#include "test-util.h"
+#include "test_util.h"
 #include "test_codes.h"
 
 #ifdef ICET_TESTS_USE_OPENGL

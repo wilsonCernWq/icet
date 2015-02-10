@@ -10,7 +10,7 @@
 #ifndef _MPI_COMM_H_
 #define _MPI_COMM_H_
 
-#include "test-util.h"
+#include "test_util.h"
 #include <IceTMPI.h>
 
 void init_mpi_comm(int *argcp, char ***argvp)

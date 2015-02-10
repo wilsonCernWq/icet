@@ -13,7 +13,7 @@
 
 #include <IceT.h>
 #include "test_codes.h"
-#include "test-util.h"
+#include "test_util.h"
 
 #include <IceTDevContext.h>
 #include <IceTDevImage.h>
