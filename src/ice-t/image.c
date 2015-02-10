@@ -1834,6 +1834,8 @@ void icetSparseImageInterlace(const IceTSparseImage in_image,
         return;
     }
 
+    icetTimingInterlaceBegin();
+
     pixel_size = colorPixelSize(color_format) + depthPixelSize(depth_format);
 
     {
@@ -1924,6 +1926,8 @@ void icetSparseImageInterlace(const IceTSparseImage in_image,
     }
 
     icetSparseImageSetActualSize(out_image, out_data);
+
+    icetTimingInterlaceEnd();
 }
 
 IceTSizeType icetGetInterlaceOffset(IceTInt partition_index,
@@ -1940,6 +1944,8 @@ IceTSizeType icetGetInterlaceOffset(IceTInt partition_index,
                        ICET_INVALID_VALUE);
         return 0;
     }
+
+    icetTimingInterlaceBegin();
 
     lower_partition_size = original_image_size/eventual_num_partitions;
     remaining_pixels = original_image_size%eventual_num_partitions;
@@ -1960,6 +1966,7 @@ IceTSizeType icetGetInterlaceOffset(IceTInt partition_index,
 
         if (interlaced_partition_idx == partition_index) {
             /* Found any partitions before this one. */
+            icetTimingInterlaceEnd();
             return offset;
         }
 
@@ -1973,6 +1980,7 @@ IceTSizeType icetGetInterlaceOffset(IceTInt partition_index,
 
     /* Should never get here. */
     icetRaiseError("Could not find partition index.", ICET_SANITY_CHECK_FAIL);
+    icetTimingInterlaceEnd();
     return 0;
 }
 

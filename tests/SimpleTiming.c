@@ -55,6 +55,7 @@ typedef struct {
     IceTDouble buffer_read_time;
     IceTDouble buffer_write_time;
     IceTDouble compress_time;
+    IceTDouble interlace_time;
     IceTDouble blend_time;
     IceTDouble draw_time;
     IceTDouble composite_time;
@@ -826,7 +827,7 @@ static void SimpleTimingCollectAndPrintLog()
 
         for (log_index = 0; log_index < total_logs; log_index++) {
             timings_type *timing = all_logs + log_index;
-            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
+            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
                    timing->num_proc,
                    timing->strategy_name,
                    timing->si_strategy_name,
@@ -843,6 +844,7 @@ static void SimpleTimingCollectAndPrintLog()
                    timing->buffer_read_time,
                    timing->buffer_write_time,
                    timing->compress_time,
+                   timing->interlace_time,
                    timing->blend_time,
                    timing->draw_time,
                    timing->composite_time,
@@ -1160,6 +1162,8 @@ static int SimpleTimingDoRender()
                        &timing_array[frame].buffer_write_time);
         icetGetDoublev(ICET_COMPRESS_TIME,
                        &timing_array[frame].compress_time);
+        icetGetDoublev(ICET_INTERLACE_TIME,
+                       &timing_array[frame].interlace_time);
         icetGetDoublev(ICET_BLEND_TIME,
                        &timing_array[frame].blend_time);
         icetGetDoublev(ICET_TOTAL_DRAW_TIME,
@@ -1219,6 +1223,7 @@ static int SimpleTimingDoRender()
                     UPDATE_MAX(buffer_read_time);
                     UPDATE_MAX(buffer_write_time);
                     UPDATE_MAX(compress_time);
+                    UPDATE_MAX(interlace_time);
                     UPDATE_MAX(blend_time);
                     UPDATE_MAX(draw_time);
                     UPDATE_MAX(composite_time);
@@ -1585,6 +1590,7 @@ int SimpleTimingRun()
                "buffer read time,"
                "buffer write time,"
                "compress time,"
+               "interlace time,"
                "blend time,"
                "draw time,"
                "composite time,"

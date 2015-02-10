@@ -34,6 +34,7 @@ void icetStateResetTiming(void)
     icetStateSetDouble(ICET_BUFFER_READ_TIME, 0.0);
     icetStateSetDouble(ICET_BUFFER_WRITE_TIME, 0.0);
     icetStateSetDouble(ICET_COMPRESS_TIME, 0.0);
+    icetStateSetDouble(ICET_INTERLACE_TIME, 0.0);
     icetStateSetDouble(ICET_BLEND_TIME, 0.0);
     icetStateSetDouble(ICET_COMPOSITE_TIME, 0.0);
     icetStateSetDouble(ICET_COLLECT_TIME, 0.0);
@@ -103,7 +104,8 @@ static void icetTimingEnd(IceTEnum start_pname,
         IceTDouble old_time;
         icetGetDoublev(start_pname, &start_time);
         icetGetDoublev(result_pname, &old_time);
-        icetStateSetDouble(result_pname, icetWallTime() - start_time);
+        icetStateSetDouble(result_pname,
+                           old_time + (icetWallTime() - start_time));
     }
 }
 
@@ -165,6 +167,21 @@ void icetTimingCompressEnd(void)
                   ICET_SUBFUNC_TIME_ID,
                   ICET_COMPRESS_TIME,
                   "compress");
+}
+
+void icetTimingInterlaceBegin(void)
+{
+    icetTimingBegin(ICET_SUBFUNC_START_TIME,
+                    ICET_SUBFUNC_TIME_ID,
+                    ICET_INTERLACE_TIME,
+                    "interlace");
+}
+void icetTimingInterlaceEnd(void)
+{
+    icetTimingEnd(ICET_SUBFUNC_START_TIME,
+                  ICET_SUBFUNC_TIME_ID,
+                  ICET_INTERLACE_TIME,
+                  "interlace");
 }
 
 void icetTimingBlendBegin(void)
