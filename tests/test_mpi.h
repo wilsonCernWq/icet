@@ -7,13 +7,15 @@
  * This source code is released under the New BSD License.
  */
 
-#ifndef _MPI_COMM_H_
-#define _MPI_COMM_H_
+#ifndef _TEST_MPI_H_
+#define _TEST_MPI_H_
 
 #include "test_util.h"
 #include <IceTMPI.h>
 
-void init_mpi_comm(int *argcp, char ***argvp)
+extern int run_test_base(int (*test_function)(void));
+
+void init_mpi(int *argcp, char ***argvp)
 {
     IceTCommunicator comm;
 
@@ -22,7 +24,7 @@ void init_mpi_comm(int *argcp, char ***argvp)
 
     initialize_test(argcp, argvp, comm);
 
-    icetDestroyMPICommunicator(comm);    
+    icetDestroyMPICommunicator(comm);
 }
 
 void finalize_communication(void)
@@ -30,4 +32,18 @@ void finalize_communication(void)
     MPI_Finalize();
 }
 
-#endif /*_MPI_COMM_H_*/
+#ifndef ICET_NO_MPI_RENDERING_FUNCTIONS
+int run_test(int (*test_function)())
+{
+    return run_test_base(test_function);
+}
+void initialize_render_window(int width, int height)
+{
+    (void)width;
+    (void)height;
+}
+void swap_buffers() {  }
+void finalize_rendering() {  }
+#endif /* !ICET_NO_MPI_RENDERING_FUNCTIONS */
+
+#endif /*_TEST_MPI_H_*/

@@ -1,6 +1,6 @@
 /* -*- c -*- *******************************************************/
 /*
- * Copyright (C) 2003 Sandia Corporation
+ * Copyright (C) 2015 Sandia Corporation
  * Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
  * the U.S. Government retains certain rights in this software.
  *
@@ -9,10 +9,6 @@
 
 #include "test_util.h"
 #include "test_codes.h"
-
-#ifdef ICET_TESTS_USE_OPENGL
-#include <IceTGL.h>
-#endif
 
 #include <IceTDevCommunication.h>
 
@@ -28,18 +24,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#ifdef ICET_TESTS_USE_GLUT
-#ifndef __APPLE__
-#include <GL/glut.h>
-#else
-#include <GLUT/glut.h>
-#endif
-#endif
-
-#ifdef ICET_TESTS_USE_GLFW
-#include <GLFW/glfw3.h>
-#endif
 
 #ifndef WIN32
 #include <unistd.h>
@@ -59,42 +43,6 @@ int SINGLE_IMAGE_STRATEGY_LIST_SIZE = 4;
 
 IceTSizeType SCREEN_WIDTH;
 IceTSizeType SCREEN_HEIGHT;
-
-#ifdef ICET_TESTS_USE_GLUT
-static int windowId;
-#endif
-
-#ifdef ICET_TESTS_USE_GLFW
-static GLFWwindow *window;
-#endif
-
-#ifdef ICET_TESTS_USE_OPENGL
-static void checkOglError(void)
-{
-    GLenum error = glGetError();
-
-#define CASE_ERROR(ename)                                               \
-    case ename: printrank("## Current IceT error = " #ename "\n"); break;
-
-    switch (error) {
-      case GL_NO_ERROR: break;
-      CASE_ERROR(GL_INVALID_ENUM);
-      CASE_ERROR(GL_INVALID_VALUE);
-      CASE_ERROR(GL_INVALID_OPERATION);
-      CASE_ERROR(GL_STACK_OVERFLOW);
-      CASE_ERROR(GL_STACK_UNDERFLOW);
-      CASE_ERROR(GL_OUT_OF_MEMORY);
-#ifdef GL_TABLE_TOO_LARGE
-      CASE_ERROR(GL_TABLE_TOO_LARGE);
-#endif
-      default:
-          printrank("## UNKNOWN OPENGL ERROR CODE!!!!!!\n");
-          break;
-    }
-
-#undef CASE_ERROR
-}
-#endif /* ICET_TESTS_USE_OPENGL */
 
 static void checkIceTError(void)
 {
@@ -182,6 +130,7 @@ static void usage(char **argv)
     printf("  -h, -help   This help message.\n");
 }
 
+extern void initialize_render_window(int width, int height);
 void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
 {
     int arg;
@@ -196,23 +145,14 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
     rank = (*comm->Comm_rank)(comm);
     num_proc = (*comm->Comm_size)(comm);
 
-  /* This is convenient code to attach a debugger to a particular process at the
-     start of a test. */
+  /* This is convenience code to attach a debugger to a particular process at
+     the start of a test. */
 #if 0
     if (rank == 0) {
         int i = 0;
         printf("Waiting in process %d\n", getpid());
         while (i == 0) sleep(1);
     }
-#endif
-
-#ifdef ICET_TESTS_USE_GLUT
-  /* Let Glut have first pass at the arguments to grab any that it can use. */
-    glutInit(argcp, *argvp);
-#endif
-
-#ifdef ICET_TESTS_USE_GLFW
-    if (!glfwInit()) { exit(1); }
 #endif
 
   /* Parse my arguments. */
@@ -260,46 +200,14 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
         exit(1);
     }
 
-#ifdef ICET_TESTS_USE_GLUT
-    /* Create a renderable window. */
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA);
-    glutInitWindowPosition(0, 0);
-    glutInitWindowSize(width, height);
-
-    {
-        char title[256];
-        sprintf(title, "IceT Test %d of %d", rank, num_proc);
-        windowId = glutCreateWindow(title);
-    }
-#endif /* ICET_TESTS_USE_GLUT */
-
-#ifdef ICET_TESTS_USE_GLFW
-    /* Create a renderable window. */
-    glfwWindowHint(GLFW_RED_BITS, 8);
-    glfwWindowHint(GLFW_GREEN_BITS, 8);
-    glfwWindowHint(GLFW_BLUE_BITS, 8);
-    glfwWindowHint(GLFW_ALPHA_BITS, 8);
-    glfwWindowHint(GLFW_DEPTH_BITS, 24);
-    glfwWindowHint(GLFW_SAMPLES, 0);
-
-    {
-        char title[256];
-        sprintf(title, "IceT Test %d of %d", rank, num_proc);
-        window = glfwCreateWindow(width, height, title, NULL, NULL);
-    }
-
-    glfwMakeContextCurrent(window);
-#endif /* ICET_TESTS_USE_GLFW */
-
     SCREEN_WIDTH = width;
     SCREEN_HEIGHT = height;
 
   /* Create an IceT context. */
     context = icetCreateContext(comm);
     icetDiagnostics(diag_level);
-#ifdef ICET_TESTS_USE_OPENGL
-    icetGLInitialize();
-#endif
+
+    initialize_render_window(width, height);
 
   /* Redirect standard output on demand. */
     if (redirect) {
@@ -347,115 +255,27 @@ IceTBoolean strategy_uses_single_image_strategy(IceTEnum strategy)
     }
 }
 
-#if defined(ICET_TESTS_USE_GLUT)
-static int (*test_function)(void);
-
-static void no_op()
-{
-}
-
-static void glut_draw()
+int run_test_base(int (*test_function)(void))
 {
     int result;
-
-    glEnable(GL_DEPTH_TEST);
-    glViewport(0, 0, (GLsizei)SCREEN_WIDTH, (GLsizei)SCREEN_HEIGHT);
-    glClear(GL_COLOR_BUFFER_BIT);
-    swap_buffers();
 
     result = test_function();
 
     finalize_test(result);
 
-    glutDestroyWindow(windowId);
-
-    exit(result);
-}
-
-int run_test(int (*tf)(void))
-{
-  /* Record the test function so we can run it in the Glut draw callback. */
-    test_function = tf;
-
-    glutDisplayFunc(no_op);
-    glutIdleFunc(glut_draw);
-
-  /* Glut will reliably create the OpenGL context only after the main loop is
-   * started.  This will create the window and then call our glut_draw function
-   * to populate it.  It will never return, which is why we call exit in
-   * glut_draw. */
-    glutMainLoop();
-
-  /* We do not expect to be here.  Raise an alert to signal that the tests are
-   * not running as expected. */
-    return TEST_NOT_PASSED;
-}
-
-#elif defined(ICET_TESTS_USE_GLFW)
-
-int run_test(int (*tf)(void))
-{
-    int result;
-
-    glEnable(GL_DEPTH_TEST);
-    glViewport(0, 0, (GLsizei)SCREEN_WIDTH, (GLsizei)SCREEN_HEIGHT);
-    glClear(GL_COLOR_BUFFER_BIT);
-    swap_buffers();
-
-    result = tf();
-
-    finalize_test(result);
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
     return result;
 }
-
-#elif defined(ICET_TESTS_USE_OPENGL)
-
-#error "ICET_TESTS_USE_OPENGL defined but no window library is defined."
-
-#else /* ICET_TESTS_USE_OPENGL */
-
-int run_test(int (*tf)(void))
-{
-    int result;
-
-    result = tf();
-
-    finalize_test(result);
-
-    return result;
-}
-
-#endif /* !ICET_TESTS_USE_OPENGL */
-
-#ifdef ICET_TESTS_USE_GLUT
-void swap_buffers(void)
-{
-    glutSwapBuffers();
-}
-#endif
-
-#ifdef ICET_TESTS_USE_GLFW
-void swap_buffers(void)
-{
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-}
-#endif
 
 #define TEST_RESULT_TAG 3492
+extern void finalize_rendering(void);
 extern void finalize_communication(void);
 void finalize_test(IceTInt result)
 {
     IceTInt rank;
     IceTInt num_proc;
 
-#ifdef ICET_TESTS_USE_OPENGL
-    checkOglError();
-#endif
+    finalize_rendering();
+
     checkIceTError();
 
     icetGetIntegerv(ICET_RANK, &rank);
