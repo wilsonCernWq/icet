@@ -10,7 +10,7 @@
 #ifndef _TEST_UTIL_H_
 #define _TEST_UTIL_H_
 
-#include "test-config.h"
+#include "test_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,9 +41,7 @@ void printstat(const char *fmt, ...);
 /* Like printf but adds the rank of the local process. */
 void printrank(const char *fmt, ...);
 
-#ifdef ICET_TESTS_USE_OPENGL
 void swap_buffers(void);
-#endif
 
 void finalize_test(IceTInt result);
 

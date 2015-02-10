@@ -13,7 +13,7 @@
 #include <IceTDevContext.h>
 #include <IceTDevImage.h>
 #include <IceTDevMatrix.h>
-#include "test-util.h"
+#include "test_util.h"
 #include "test_codes.h"
 
 #include <stdlib.h>
@@ -902,8 +902,8 @@ static int SimpleTimingDoRender()
 
     /* Normally, the first thing that you do is set up your communication and
      * then create at least one IceT context.  This has already been done in the
-     * calling function (i.e. icetTests_mpi.c).  See the init_mpi_comm in
-     * mpi_comm.h for an example.
+     * calling function (i.e. icetTests_mpi.c).  See the init_mpi in
+     * test_mpi.h for an example.
      */
 
     init_opacity_lookup();

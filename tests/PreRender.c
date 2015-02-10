@@ -13,7 +13,7 @@
 #include <IceTDevCommunication.h>
 #include <IceTDevState.h>
 #include "test_codes.h"
-#include "test-util.h"
+#include "test_util.h"
 
 #include <stdlib.h>
 #include <stdio.h>
