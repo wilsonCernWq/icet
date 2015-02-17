@@ -1254,7 +1254,7 @@ static void icetRadixkTelescopeCompose(const IceTInt *compose_group,
                                           result_image,
                                           piece_offset);
     } else {
-        /* In the sub group. */\
+        /* In the sub group. */
         icetRadixkTelescopeComposeSend(main_group,
                                        main_group_size,
                                        sub_group,
