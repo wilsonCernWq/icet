@@ -28,6 +28,7 @@
 struct IceTStateValue {
     IceTEnum type;
     IceTSizeType num_entries;
+    IceTSizeType buffer_size;
     void *data;
     IceTTimeStamp mod_time;
 };
@@ -450,7 +451,7 @@ static const IceTByte g_post_padding[STATE_PADDING_SIZE] = {
 static void stateCheck(IceTEnum pname, const IceTState state)
 {
     if (state[pname].type != ICET_NULL) {
-        if (state[pname].num_entries > 0) {
+        if (state[pname].buffer_size > 0) {
             IceTSizeType i;
             IceTByte *padding;
             padding = STATE_DATA_PRE_PADDING(pname, state);
@@ -479,7 +480,7 @@ static void stateCheck(IceTEnum pname, const IceTState state)
             if (state[pname].data != NULL) {
                 char message[256];
                 sprintf(message,
-                        "State variable 0x%X has zero entries but"
+                        "State variable 0x%X has zero sized buffer but"
                         " non-null pointer.",
                         pname);
                 icetRaiseError(message, ICET_SANITY_CHECK_FAIL);
@@ -503,6 +504,15 @@ static void stateCheck(IceTEnum pname, const IceTState state)
                     (int)state[pname].num_entries);
             icetRaiseError(message, ICET_SANITY_CHECK_FAIL);
         }
+        if (state[pname].buffer_size != 0) {
+            char message[256];
+            sprintf(message,
+                    "State variable 0x%X has ICET_NULL type but"
+                    " also has a buffer of size %d (!= 0).",
+                    pname,
+                    (int)state[pname].buffer_size);
+            icetRaiseError(message, ICET_SANITY_CHECK_FAIL);
+        }
     }
 }
 #else /* ICET_STATE_CHECK_MEM */
@@ -517,32 +527,43 @@ static IceTVoid *stateAllocate(IceTEnum pname,
                                IceTEnum type,
                                IceTState state)
 {
-    IceTVoid *buffer;
-
     stateCheck(pname, state);
+
+    if (num_entries < 0) {
+        icetRaiseError("Asked to allocate buffer of negative size",
+                       ICET_SANITY_CHECK_FAIL);
+    }
 
     if (   (num_entries == state[pname].num_entries)
         && (type == state[pname].type) ) {
-        /* Return the current buffer. */
+        /* Current buffer already configured correctly. */
         state[pname].mod_time = icetGetTimeStamp();
-        buffer = state[pname].data;
-    } else if (num_entries > 0) {
-        stateFree(pname, state);
-        /* Create a new buffer. */
-        buffer = malloc(STATE_DATA_ALLOCATE(type, num_entries));
-        if (buffer == NULL) {
-            icetRaiseError("Could not allocate memory for state variable.",
-                           ICET_OUT_OF_MEMORY);
-            return NULL;
-        }
+    } else if ((num_entries > 0) || (state[pname].buffer_size > 0)) {
+        IceTSizeType buffer_size = STATE_DATA_ALLOCATE(type, num_entries);
+        if (buffer_size < state[pname].buffer_size) {
+            /* Reuse larger buffer. */
+            stateCheck(pname, state);
+        } else {
+            /* Create a new buffer. */
+            IceTVoid *buffer;
+
+            stateFree(pname, state);
+            buffer = malloc(STATE_DATA_ALLOCATE(type, num_entries));
+            if (buffer == NULL) {
+                icetRaiseError("Could not allocate memory for state variable.",
+                               ICET_OUT_OF_MEMORY);
+                return NULL;
+            }
 #ifdef ICET_STATE_CHECK_MEM
-        /* Skip past padding. */
-        buffer = (IceTByte *)buffer + STATE_PADDING_SIZE;
+            /* Skip past padding. */
+            buffer = (IceTByte *)buffer + STATE_PADDING_SIZE;
 #endif
+            state[pname].buffer_size = buffer_size;
+            state[pname].data = buffer;
+        }
 
         state[pname].type = type;
         state[pname].num_entries = num_entries;
-        state[pname].data = buffer;
         state[pname].mod_time = icetGetTimeStamp();
 
 #ifdef ICET_STATE_CHECK_MEM
@@ -561,25 +582,24 @@ static IceTVoid *stateAllocate(IceTEnum pname,
         }
 #endif
     } else { /* num_entries <= 0 */
-        buffer = NULL;
-
         state[pname].type = type;
         state[pname].num_entries = 0;
-        state[pname].data = buffer;
+        state[pname].buffer_size = 0;
+        state[pname].data = NULL;
         state[pname].mod_time = icetGetTimeStamp();
     }
 
 #ifdef ICET_STATE_CHECK_MEM
-    memset(buffer, 0xDC, STATE_DATA_WIDTH(type, num_entries));
+    memset(state[pname].data, 0xDC, STATE_DATA_WIDTH(type, num_entries));
 #endif
-    return buffer;
+    return state[pname].data;
 }
 
 static void stateFree(IceTEnum pname, IceTState state)
 {
     stateCheck(pname, state);
 
-    if ((state[pname].type != ICET_NULL) && (state[pname].num_entries > 0)) {
+    if ((state[pname].type != ICET_NULL) && (state[pname].buffer_size > 0)) {
 #ifdef ICET_STATE_CHECK_MEM
         free(STATE_DATA_PRE_PADDING(pname, state));
 #else
@@ -587,6 +607,7 @@ static void stateFree(IceTEnum pname, IceTState state)
 #endif
         state[pname].type = ICET_NULL;
         state[pname].num_entries = 0;
+        state[pname].buffer_size = 0;
         state[pname].data = NULL;
         state[pname].mod_time = 0;
     }
