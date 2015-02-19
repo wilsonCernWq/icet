@@ -155,12 +155,15 @@ static void radixkrGetPartitionIndices(radixkrInfo info,
         total_partitions *= split;
         round_info->split_factor = split;
         round_info->partition_index = (group_rank / step) % round_info->k;
-        round_info->has_image = (group_rank < (step * current_group_size));
-        round_info->has_image &= (round_info->partition_index < split);
         round_info->last_partition = ((group_rank/step) >= (group_size/step-1));
         round_info->step = step;
         current_group_size = current_group_size / round_info->k;
         step *= round_info->k;
+        /* The has_image test must follow the changes to current_group_size and
+           step so that the group sizes gets rounded and the local rank will
+           pop out of the last partition. */
+        round_info->has_image = (group_rank < (step * current_group_size));
+        round_info->has_image &= (round_info->partition_index < split);
 
         current_round++;
     }
@@ -889,7 +892,7 @@ void icetRadixkrCompose(const IceTInt *compose_group,
         }
     } /* for all rounds */
 
-    /* If we interlaced the image and ar actually returning something,
+    /* If we interlaced the image and are actually returning something,
        correct the offset. */
     if (use_interlace && (icetSparseImageGetNumPixels(working_image) > 0)) {
         IceTInt partition_index = radixkrGetFinalPartitionIndex(&info);
