@@ -50,6 +50,7 @@ typedef struct radixkrRoundInfoStruct {
     IceTInt split_factor; /* Number of new image partitions made from each partition. */
     IceTBoolean has_image; /* True if local process collects image data this round. */
     IceTBoolean last_partition; /* True if local process is part of the last partition. */
+    IceTInt first_rank; /* The lowest rank of those participating with this process this round. */
     IceTInt partition_index; /* Index of partition at this round (if has_image true). */
 } radixkrRoundInfo;
 
@@ -139,12 +140,22 @@ static void radixkrGetPartitionIndices(radixkrInfo info,
     icetGetIntegerv(ICET_MAX_IMAGE_SPLIT, &max_image_split);
 
     total_partitions = 1;
+    /* Procs with the same image partition are step ranks from each other. */
     step = 1;
     current_group_size = group_size;
     current_round = 0;
     while (current_round < info.num_rounds) {
         radixkrRoundInfo *round_info = &info.rounds[current_round];
         IceTInt split;
+        IceTInt next_step = step*round_info->k;
+        IceTInt next_group_size = current_group_size / round_info->k;
+        IceTInt end_of_groups = next_step*next_group_size;
+        IceTInt first_rank;
+
+        first_rank = group_rank % step + (group_rank/next_step)*next_step;
+        if (first_rank >= end_of_groups) {
+            first_rank -= next_step;
+        }
 
         if (total_partitions * round_info->k <= max_image_split) {
             split = round_info->k;
@@ -154,11 +165,12 @@ static void radixkrGetPartitionIndices(radixkrInfo info,
 
         total_partitions *= split;
         round_info->split_factor = split;
-        round_info->partition_index = (group_rank / step) % round_info->k;
-        round_info->last_partition = ((group_rank/step) >= (group_size/step-1));
+        round_info->first_rank = first_rank;
+        round_info->partition_index = (group_rank - first_rank)/step;
+        round_info->last_partition = ((first_rank+next_step) >= end_of_groups);
         round_info->step = step;
-        current_group_size = current_group_size / round_info->k;
-        step *= round_info->k;
+        current_group_size = next_group_size;
+        step = next_step;
         /* The has_image test must follow the changes to current_group_size and
            step so that the group sizes gets rounded and the local rank will
            pop out of the last partition. */
@@ -379,7 +391,6 @@ static radixkrPartnerGroupInfo radixkrGetPartners(
         const radixkrRoundInfo *round_info,
         IceTInt remaining_partitions,
         const IceTInt *compose_group,
-        IceTInt group_rank,
         IceTSizeType start_size)
 {
     const IceTInt current_k = round_info->k;
@@ -394,7 +405,6 @@ static radixkrPartnerGroupInfo radixkrGetPartners(
     IceTVoid *send_buf_pool;
     IceTSizeType partition_num_pixels;
     IceTSizeType sparse_image_size;
-    IceTInt first_partner_group_rank;
     IceTInt i;
 
     num_partners = current_k;
@@ -436,11 +446,9 @@ static radixkrPartnerGroupInfo radixkrGetPartners(
         send_buf_pool = NULL;
     }
 
-    first_partner_group_rank
-        = group_rank % step + (group_rank/(step*current_k))*(step*current_k);
     for (i = 0; i < num_partners; i++) {
         radixkrPartnerInfo *p = &p_group.partners[i];
-        IceTInt partner_group_rank = first_partner_group_rank + i*step;
+        IceTInt partner_group_rank = round_info->first_rank + i*step;
 
         p->rank = compose_group[partner_group_rank];
 
@@ -858,7 +866,6 @@ void icetRadixkrCompose(const IceTInt *compose_group,
                 = radixkrGetPartners(round_info,
                                      remaining_partitions,
                                      compose_group,
-                                     group_rank,
                                      my_size);
         IceTCommRequest *receive_requests;
         IceTCommRequest *send_requests;
