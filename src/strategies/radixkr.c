@@ -791,6 +791,8 @@ void icetRadixkrCompose(const IceTInt *compose_group,
     /* This hint of an argument is ignored. */
     (void)image_dest;
 
+    icetRaiseDebug("In radix-kr compose");
+
     /* Find your rank in your group. */
     group_rank = icetFindMyRankInGroup(compose_group, group_size);
     if (group_rank < 0) {

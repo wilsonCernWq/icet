@@ -136,6 +136,7 @@ static void usage(char *argv[])
     printstat("  -sequential   Use the sequential strategy.\n");
     printstat("  -bswap        Use the binary-swap single-image strategy.\n");
     printstat("  -radixk       Use the radix-k single-image strategy.\n");
+    printstat("  -radixkr      Use the radix-kr single-image strategy.\n");
     printstat("  -tree         Use the tree single-image strategy.\n");
     printstat("  -magic-k-study <num> Use the radix-k single-image strategy and repeat for\n"
            "                   multiple values of k, up to <num>, doubling each time.\n");
@@ -212,6 +213,8 @@ static void parse_arguments(int argc, char *argv[])
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_BSWAP;
         } else if (strcmp(argv[arg], "-radixk") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXK;
+        } else if (strcmp(argv[arg], "-radixkr") == 0) {
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXKR;
         } else if (strcmp(argv[arg], "-tree") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_TREE;
         } else if (strcmp(argv[arg], "-magic-k-study") == 0) {
@@ -1043,6 +1046,13 @@ static int SimpleTimingDoRender()
         icetGetIntegerv(ICET_MAGIC_K, &magic_k);
         sprintf(name_buffer, "radix-k %d", (int)magic_k);
         si_strategy_name = name_buffer;
+    } else if (g_single_image_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXKR) {
+            static char name_buffer[256];
+            IceTInt magic_k;
+
+            icetGetIntegerv(ICET_MAGIC_K, &magic_k);
+            sprintf(name_buffer, "radix-kr %d", (int)magic_k);
+            si_strategy_name = name_buffer;
     } else {
         si_strategy_name = icetGetSingleImageStrategyName();
     }
