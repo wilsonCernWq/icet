@@ -1495,7 +1495,7 @@ static IceTBoolean radixkTryTelescopeSendReceive(IceTInt *main_group,
     return ICET_TRUE;
 }
 
-ICET_EXPORT IceTBoolean icetRadixTelescopeSendReceiveTest(void)
+ICET_EXPORT IceTBoolean icetRadixkTelescopeSendReceiveTest(void)
 {
     IceTInt main_group_size;
 

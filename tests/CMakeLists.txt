@@ -51,6 +51,7 @@ SET(IceTTestSrcs
   OddImageSizes.c
   OddProcessCounts.c
   PreRender.c
+  RadixkrUnitTests.c
   RadixkUnitTests.c
   RenderEmpty.c
   SimpleTiming.c
