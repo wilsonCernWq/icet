@@ -570,11 +570,11 @@ static IceTCommRequest *radixkrPostSends(radixkrPartnerGroupInfo p_group,
         /* The pivot for loop arranges the sends to happen in an order such that
            those to be composited first in their destinations will be sent
            first.  This serves little purpose other than to try to stagger the
-           order of sending images so that no everyone sends to the same process
-           first. */
+           order of sending images so that not everyone sends to the same
+           process first. */
         BEGIN_PIVOT_FOR(i,
                         0,
-                        round_info->partition_index,
+                        round_info->partition_index % round_info->split_factor,
                         round_info->split_factor) {
             radixkrPartnerInfo *p = &p_group.partners[i];
             p->offset = piece_offsets[i];
