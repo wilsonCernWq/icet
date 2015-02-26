@@ -30,6 +30,8 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevImage.h>
 
+/* #define RADIXK_USE_TELESCOPE */
+
 #define RADIXK_SWAP_IMAGE_TAG_START     2200
 #define RADIXK_TELESCOPE_IMAGE_TAG      2300
 
@@ -91,6 +93,7 @@ typedef struct radixkPartnerInfoStruct {
         } \
     }
 
+#ifdef RADIXK_USE_TELESCOPE
 /* Finds the largest power of 2 equal to or smaller than x. */
 static IceTInt radixkFindPower2(IceTInt x)
 {
@@ -99,6 +102,7 @@ static IceTInt radixkFindPower2(IceTInt x)
     pow2 = pow2 >> 1;
     return pow2;
 }
+#endif
 
 static IceTInt radixkFindFloorPow2(IceTInt x)
 {
@@ -784,14 +788,13 @@ static void radixkCompositeIncomingImages(radixkPartnerInfo *partners,
     }
 }
 
-static void icetRadixkBasicCompose(const IceTInt *compose_group,
+static void icetRadixkBasicCompose(const radixkInfo *info,
+                                   const IceTInt *compose_group,
                                    IceTInt group_size,
                                    IceTInt total_num_partitions,
                                    IceTSparseImage working_image,
                                    IceTSizeType *piece_offset)
 {
-    radixkInfo info = { NULL, 0 };
-
     IceTSizeType my_offset;
     IceTInt current_round;
     IceTInt remaining_partitions;
@@ -812,10 +815,8 @@ static void icetRadixkBasicCompose(const IceTInt *compose_group,
         return;
     }
 
-    info = radixkGetK(group_size, group_rank);
-
     /* num_rounds > 0 is assumed several places throughout this function */
-    if (info.num_rounds <= 0) {
+    if (info->num_rounds <= 0) {
         icetRaiseError("Radix-k has no rounds?", ICET_SANITY_CHECK_FAIL);
     }
 
@@ -826,9 +827,9 @@ static void icetRadixkBasicCompose(const IceTInt *compose_group,
     my_offset = 0;
     remaining_partitions = total_num_partitions;
 
-    for (current_round = 0; current_round < info.num_rounds; current_round++) {
+    for (current_round = 0; current_round < info->num_rounds; current_round++) {
         IceTSizeType my_size = icetSparseImageGetNumPixels(working_image);
-        const radixkRoundInfo *round_info = &info.rounds[current_round];
+        const radixkRoundInfo *round_info = &info->rounds[current_round];
         radixkPartnerInfo *partners = radixkGetPartners(round_info,
                                                         remaining_partitions,
                                                         compose_group,
@@ -874,6 +875,8 @@ static void icetRadixkBasicCompose(const IceTInt *compose_group,
 
     return;
 }
+
+#ifdef RADIXK_USE_TELESCOPE
 
 static IceTInt icetRadixkTelescopeFindUpperGroupSender(
                                                      const IceTInt *my_group,
@@ -971,9 +974,15 @@ static void icetRadixkTelescopeComposeReceive(const IceTInt *my_group,
 {
     IceTSparseImage working_image = input_image;
     IceTInt upper_sender;
+    radixkInfo info;
+    IceTInt my_group_rank;
+
+    my_group_rank = icetFindMyRankInGroup(my_group, my_group_size);
+    info = radixkGetK(my_group_size, my_group_rank);
 
     /* Start with the basic compose of my group. */
-    icetRadixkBasicCompose(my_group,
+    icetRadixkBasicCompose(&info,
+                           my_group,
                            my_group_size,
                            total_num_partitions,
                            working_image,
@@ -1206,7 +1215,7 @@ static void icetRadixkTelescopeCompose(const IceTInt *compose_group,
     /* Here is a convenient place to determine the final number of
        partitions. */
     {
-        /* Middle argument does not matter. */
+        /* Group rank does not matter for our purposes. */
         radixkInfo info = radixkGetK(main_group_size, 0);
         total_num_partitions = radixkGetTotalNumPartitions(&info);
     }
@@ -1280,17 +1289,17 @@ static void icetRadixkTelescopeCompose(const IceTInt *compose_group,
             return;
         }
 
-        info = radixkGetK(main_group_size,
-                          main_group_rank);
+        info = radixkGetK(main_group_size, main_group_rank);
 
         global_partition = radixkGetFinalPartitionIndex(&info);
         *piece_offset = icetGetInterlaceOffset(global_partition,
-                                               main_group_size,
+                                               total_num_partitions,
                                                original_image_size);
     }
 
     return;
 }
+
 
 
 void icetRadixkCompose(const IceTInt *compose_group,
@@ -1307,6 +1316,59 @@ void icetRadixkCompose(const IceTInt *compose_group,
                                result_image,
                                piece_offset);
 }
+
+#else
+
+void icetRadixkCompose(const IceTInt *compose_group,
+                       IceTInt group_size,
+                       IceTInt image_dest,
+                       IceTSparseImage input_image,
+                       IceTSparseImage *result_image,
+                       IceTSizeType *piece_offset)
+{
+    IceTInt group_rank = icetFindMyRankInGroup(compose_group, group_size);
+    radixkInfo info = radixkGetK(group_size, group_rank);
+    IceTInt total_num_partitions = radixkGetTotalNumPartitions(&info);
+    IceTBoolean use_interlace = icetIsEnabled(ICET_INTERLACE_IMAGES);
+    IceTSparseImage working_image = input_image;
+    IceTSizeType original_image_size = icetSparseImageGetNumPixels(input_image);
+
+    (void)image_dest; /* Not used. */
+
+    if (use_interlace) {
+        use_interlace = (info.num_rounds > 1);
+    }
+
+    if (use_interlace) {
+        IceTSparseImage interlaced_image = icetGetStateBufferSparseImage(
+                                       RADIXK_INTERLACED_IMAGE_BUFFER,
+                                       icetSparseImageGetWidth(working_image),
+                                       icetSparseImageGetHeight(working_image));
+        icetSparseImageInterlace(working_image,
+                                 total_num_partitions,
+                                 RADIXK_SPLIT_OFFSET_ARRAY_BUFFER,
+                                 interlaced_image);
+        working_image = interlaced_image;
+    }
+
+    icetRadixkBasicCompose(&info,
+                           compose_group,
+                           group_size,
+                           total_num_partitions,
+                           working_image,
+                           piece_offset);
+
+    *result_image = working_image;
+
+    if (use_interlace && (0 < icetSparseImageGetNumPixels(working_image))) {
+        IceTInt global_partition = radixkGetFinalPartitionIndex(&info);
+        *piece_offset = icetGetInterlaceOffset(global_partition,
+                                               total_num_partitions,
+                                               original_image_size);
+    }
+}
+
+#endif
 
 static IceTBoolean radixkTryPartitionLookup(IceTInt group_size)
 {
@@ -1421,6 +1483,8 @@ ICET_EXPORT IceTBoolean icetRadixkPartitionLookupUnitTest(void)
 
     return ICET_TRUE;
 }
+
+#ifdef RADIXK_USE_TELESCOPE
 
 #define MAIN_GROUP_RANK(idx)    (10000 + idx)
 #define SUB_GROUP_RANK(idx)     (20000 + idx)
@@ -1556,3 +1620,13 @@ ICET_EXPORT IceTBoolean icetRadixkTelescopeSendReceiveTest(void)
 
     return ICET_TRUE;
 }
+
+#else /*!RADIXK_USE_TELESCOPE*/
+
+ICET_EXPORT IceTBoolean icetRadixkTelescopeSendReceiveTest(void)
+{
+    /* Telescope method disabled. */
+    return ICET_TRUE;
+}
+
+#endif /*!RADIXK_USE_TELESCOPE*/

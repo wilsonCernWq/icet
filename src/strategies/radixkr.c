@@ -16,6 +16,9 @@
 
    The Radix-k algorithm was ported to IceT by Wesley Kendall from University
    of Tennessee at Knoxville.
+
+   The derived Radix-kr algorithm was designed by Kenneth Moreland at Sandia
+   National Laboratories.
 */
 
 #include <stdio.h>
@@ -157,7 +160,8 @@ static void radixkrGetPartitionIndices(radixkrInfo info,
             first_rank -= next_step;
         }
 
-        if (total_partitions * round_info->k <= max_image_split) {
+        if ((max_image_split < 1)
+            || (total_partitions * round_info->k <= max_image_split)) {
             split = round_info->k;
         } else {
             split = max_image_split/total_partitions;

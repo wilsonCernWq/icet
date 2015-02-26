@@ -20,6 +20,10 @@
 
 #include <signal.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 static IceTEnum currentError = ICET_NO_ERROR;
 static IceTEnum currentLevel;
 
@@ -125,5 +129,9 @@ void icetDiagnostics(IceTBitField mask)
 
 void icetDebugBreak(void)
 {
+#if 0
+    printf("Waiting for debugger in process %d\n", getpid());
+    sleep(100);
+#endif
     raise(SIGSEGV);
 }

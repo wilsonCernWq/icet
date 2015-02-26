@@ -86,7 +86,8 @@ static int OddProcessCountsTryCollectOptions(void)
 
     icetGetIntegerv(ICET_SINGLE_IMAGE_STRATEGY, &si_strategy);
 
-    if (si_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXK) {
+    if ((si_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXK)
+        || (si_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXKR)) {
         IceTInt rank;
         IceTInt num_proc;
         IceTInt magic_k;
