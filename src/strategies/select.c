@@ -34,6 +34,12 @@ extern void icetBswapCompose(const IceTInt *compose_group,
                              IceTSparseImage input_image,
                              IceTSparseImage *result_image,
                              IceTSizeType *piece_offset);
+void icetBswapFoldingCompose(const IceTInt *compose_group,
+                             IceTInt group_size,
+                             IceTInt image_dest,
+                             IceTSparseImage input_image,
+                             IceTSparseImage *result_image,
+                             IceTSizeType *piece_offset);
 extern void icetTreeCompose(const IceTInt *compose_group,
                             IceTInt group_size,
                             IceTInt image_dest,
@@ -139,6 +145,7 @@ IceTBoolean icetSingleImageStrategyValid(IceTEnum strategy)
       case ICET_SINGLE_IMAGE_STRATEGY_TREE:
       case ICET_SINGLE_IMAGE_STRATEGY_RADIXK:
       case ICET_SINGLE_IMAGE_STRATEGY_RADIXKR:
+      case ICET_SINGLE_IMAGE_STRATEGY_BSWAP_FOLDING:
           return ICET_TRUE;
       default:
           return ICET_FALSE;
@@ -153,6 +160,7 @@ const char *icetSingleImageStrategyNameFromEnum(IceTEnum strategy)
       case ICET_SINGLE_IMAGE_STRATEGY_TREE:             return "Binary Tree";
       case ICET_SINGLE_IMAGE_STRATEGY_RADIXK:           return "Radix-k";
       case ICET_SINGLE_IMAGE_STRATEGY_RADIXKR:          return "Radix-kr";
+      case ICET_SINGLE_IMAGE_STRATEGY_BSWAP_FOLDING:    return "Folded Binary Swap";
       default:
           icetRaiseError("Invalid single image strategy.", ICET_INVALID_ENUM);
           return "<Invalid>";
@@ -211,6 +219,14 @@ void icetInvokeSingleImageStrategy(IceTEnum strategy,
                              result_image,
                              piece_offset);
           break;
+    case ICET_SINGLE_IMAGE_STRATEGY_BSWAP_FOLDING:
+        icetBswapFoldingCompose(compose_group,
+                                group_size,
+                                image_dest,
+                                input_image,
+                                result_image,
+                                piece_offset);
+        break;
       default:
           icetRaiseError("Invalid single image strategy.", ICET_INVALID_ENUM);
           break;

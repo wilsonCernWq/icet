@@ -13,14 +13,18 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevImage.h>
 
+#include <string.h>
+
 #define BSWAP_INCOMING_IMAGES_BUFFER            ICET_SI_STRATEGY_BUFFER_0
 #define BSWAP_OUTGOING_IMAGES_BUFFER            ICET_SI_STRATEGY_BUFFER_1
 #define BSWAP_SPARE_WORKING_IMAGE_BUFFER        ICET_SI_STRATEGY_BUFFER_2
 #define BSWAP_IMAGE_ARRAY                       ICET_SI_STRATEGY_BUFFER_3
 #define BSWAP_DUMMY_ARRAY                       ICET_SI_STRATEGY_BUFFER_4
+#define BSWAP_COMPOSE_GROUP_BUFFER              ICET_SI_STRATEGY_BUFFER_5
 
 #define BSWAP_SWAP_IMAGES 21
 #define BSWAP_TELESCOPE 22
+#define BSWAP_FOLD 23
 
 #define BIT_REVERSE(result, x, max_val_plus_one)                              \
 {                                                                             \
@@ -554,7 +558,7 @@ static void bswapComposeNoCombine(const IceTInt *compose_group,
             input_image = working_image;
             available_image = icetSparseImageNull();
         }
-            
+
 
         /* I am part of the lower group.  Do the actual binary swap. */
         bswapComposePow2(compose_group,
@@ -594,7 +598,7 @@ void icetBswapCompose(const IceTInt *compose_group,
                       IceTSparseImage *result_image,
                       IceTSizeType *piece_offset)
 {
-    icetRaiseDebug("In bswapCompose");
+    icetRaiseDebug("In binary-swap compose");
 
     /* Remove warning about unused parameter.  Binary swap leaves images evenly
      * partitioned, so we have no use of the image_dest parameter. */
@@ -607,4 +611,142 @@ void icetBswapCompose(const IceTInt *compose_group,
                           input_image,
                           result_image,
                           piece_offset);
+}
+
+
+void icetBswapFoldingCompose(const IceTInt *compose_group,
+                             IceTInt group_size,
+                             IceTInt image_dest,
+                             IceTSparseImage input_image,
+                             IceTSparseImage *result_image,
+                             IceTSizeType *piece_offset)
+{
+    IceTInt group_rank = icetFindMyRankInGroup(compose_group, group_size);
+    IceTInt pow2size = bswapFindPower2(group_size);
+    IceTInt extra_proc = group_size - pow2size;
+    IceTBoolean use_interlace;
+    IceTSparseImage working_image;
+    IceTSparseImage available_image;
+    IceTSparseImage spare_image;
+    IceTSizeType total_num_pixels = icetSparseImageGetNumPixels(input_image);
+    IceTInt *pow2group;
+
+    icetRaiseDebug("In binary-swap folding compose");
+
+    (void)image_dest;  /* not used */
+
+    if (group_size < 2) {
+        *result_image = input_image;
+        *piece_offset = 0;
+        return;
+    }
+
+    /* Interlace images when requested. */
+    use_interlace = (pow2size > 2) && icetIsEnabled(ICET_INTERLACE_IMAGES);
+    if (use_interlace) {
+        IceTSparseImage interlaced_image = icetGetStateBufferSparseImage(
+                    BSWAP_SPARE_WORKING_IMAGE_BUFFER,
+                    icetSparseImageGetWidth(input_image),
+                    icetSparseImageGetHeight(input_image));
+        icetSparseImageInterlace(input_image,
+                                 pow2size,
+                                 BSWAP_DUMMY_ARRAY,
+                                 interlaced_image);
+        working_image = interlaced_image;
+        available_image = input_image;
+    } else {
+        /* Allocate available (scratch) image buffer. */
+        available_image = icetGetStateBufferSparseImage(
+                    BSWAP_SPARE_WORKING_IMAGE_BUFFER,
+                    icetSparseImageGetWidth(input_image),
+                    icetSparseImageGetHeight(input_image));
+        working_image = input_image;
+    }
+
+    /* Fold the existing number of processes into a subset that is the maximum
+     * power of 2. */
+    pow2group = icetGetStateBuffer(BSWAP_COMPOSE_GROUP_BUFFER,
+                                   sizeof(IceTInt)*pow2size);
+    {
+        IceTInt whole_group_index = 0;
+        IceTInt pow2group_index = 0;
+        while (pow2group_index < extra_proc) {
+            pow2group[pow2group_index] = compose_group[whole_group_index];
+
+            if (group_rank == whole_group_index) {
+                /* I need to receive a folded image and composite it. */
+                IceTSizeType incoming_size
+                        = icetSparseImageBufferSize(total_num_pixels, 1);
+                IceTVoid *in_image_buffer
+                        = icetGetStateBuffer(BSWAP_INCOMING_IMAGES_BUFFER,
+                                             incoming_size);
+                IceTSparseImage in_image;
+                IceTSparseImage old_working_image;
+
+                icetCommRecv(in_image_buffer,
+                             incoming_size,
+                             ICET_BYTE,
+                             compose_group[whole_group_index+1],
+                             BSWAP_FOLD);
+                in_image = icetSparseImageUnpackageFromReceive(in_image_buffer);
+
+                icetCompressedCompressedComposite(working_image,
+                                                  in_image,
+                                                  available_image);
+                old_working_image = working_image;
+                working_image = available_image;
+                available_image = old_working_image;
+            } else if (group_rank == whole_group_index + 1) {
+                /* I need to send my image to get folded then drop out. */
+                IceTVoid *package_buffer;
+                IceTSizeType package_size;
+
+                icetSparseImagePackageForSend(working_image,
+                                              &package_buffer, &package_size);
+
+                icetCommSend(package_buffer,
+                             package_size,
+                             ICET_BYTE,
+                             compose_group[whole_group_index],
+                             BSWAP_FOLD);
+
+                *result_image = icetSparseImageNull();
+                *piece_offset = 0;
+                return;
+            }
+
+            whole_group_index += 2;
+            pow2group_index++;
+        }
+
+        /* That handles all the folded images. The rest of the group can just
+         * copy over. Do a sanity check too to make sure that we haven't messed
+         * up our indexing. */
+        if ((group_size - whole_group_index) != (pow2size - pow2group_index)) {
+            icetRaiseError("Miscounted indices while folding.",
+                           ICET_SANITY_CHECK_FAIL);
+        }
+        memcpy(&pow2group[pow2group_index],
+               &compose_group[whole_group_index],
+               sizeof(IceTInt)*(group_size-whole_group_index));
+    }
+
+    /* Time to do the actual binary-swap on our new power of two group. */
+    bswapComposePow2(pow2group,
+                     pow2size,
+                     pow2size,
+                     working_image,
+                     available_image,
+                     result_image,
+                     piece_offset,
+                     &spare_image);
+
+    if (use_interlace) {
+        IceTInt global_partition;
+        IceTInt pow2rank = icetFindMyRankInGroup(pow2group, pow2size);
+        BIT_REVERSE(global_partition, pow2rank, pow2size);
+        *piece_offset = icetGetInterlaceOffset(global_partition,
+                                               pow2size,
+                                               total_num_pixels);
+    }
 }

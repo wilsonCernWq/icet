@@ -135,6 +135,7 @@ static void usage(char *argv[])
     printstat("  -vtree        Use the virtual trees strategy.\n");
     printstat("  -sequential   Use the sequential strategy.\n");
     printstat("  -bswap        Use the binary-swap single-image strategy.\n");
+    printstat("  -bswapfold    Use the binary-swap with folding single-image strategy.\n");
     printstat("  -radixk       Use the radix-k single-image strategy.\n");
     printstat("  -radixkr      Use the radix-kr single-image strategy.\n");
     printstat("  -tree         Use the tree single-image strategy.\n");
@@ -211,6 +212,8 @@ static void parse_arguments(int argc, char *argv[])
             g_strategy = ICET_STRATEGY_SEQUENTIAL;
         } else if (strcmp(argv[arg], "-bswap") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_BSWAP;
+        } else if (strcmp(argv[arg], "-bswapfold") == 0) {
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_BSWAP_FOLDING;
         } else if (strcmp(argv[arg], "-radixk") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXK;
         } else if (strcmp(argv[arg], "-radixkr") == 0) {
