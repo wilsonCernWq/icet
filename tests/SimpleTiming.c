@@ -46,6 +46,7 @@ typedef struct {
     IceTInt num_tiles_y;
     IceTInt screen_width;
     IceTInt screen_height;
+    IceTFloat zoom;
     IceTBoolean transparent;
     IceTBoolean no_interlace;
     IceTBoolean no_collect;
@@ -98,6 +99,7 @@ static IceTInt g_num_tiles_x;
 static IceTInt g_num_tiles_y;
 static IceTInt g_num_frames;
 static IceTInt g_seed;
+static IceTFloat g_zoom;
 static IceTBoolean g_transparent;
 static IceTBoolean g_colored_background;
 static IceTBoolean g_no_interlace;
@@ -124,6 +126,7 @@ static void usage(char *argv[])
     printstat("  -tilesy <num> Sets the number of tiles vertical (default 1).\n");
     printstat("  -frames <num> Sets the number of frames to render (default 2).\n");
     printstat("  -seed <num>   Use the given number as the random seed.\n");
+    printstat("  -zoom <num>   Set the zoom factor for the camera (larger = more zoom).\n");
     printstat("  -transparent  Render transparent images.  (Uses 4 floats for colors.)\n");
     printstat("  -colored-background Use a color for the background and correct as necessary.\n");
     printstat("  -no-interlace Turn off the image interlacing optimization.\n");
@@ -159,6 +162,7 @@ static void parse_arguments(int argc, char *argv[])
     g_num_tiles_y = 1;
     g_num_frames = 2;
     g_seed = (IceTInt)time(NULL);
+    g_zoom = (IceTFloat)1.0;
     g_transparent = ICET_FALSE;
     g_colored_background = ICET_FALSE;
     g_no_interlace = ICET_FALSE;
@@ -188,6 +192,9 @@ static void parse_arguments(int argc, char *argv[])
         } else if (strcmp(argv[arg], "-seed") == 0) {
             arg++;
             g_seed = atoi(argv[arg]);
+        } else if (strcmp(argv[arg], "-zoom") == 0) {
+            arg++;
+            g_zoom = (IceTFloat)atof(argv[arg]);
         } else if (strcmp(argv[arg], "-transparent") == 0) {
             g_transparent = ICET_TRUE;
         } else if (strcmp(argv[arg], "-colored-background") == 0) {
@@ -827,7 +834,7 @@ static void SimpleTimingCollectAndPrintLog()
 
         for (log_index = 0; log_index < total_logs; log_index++) {
             timings_type *timing = all_logs + log_index;
-            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
+            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%0.1f,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
                    timing->num_proc,
                    timing->strategy_name,
                    timing->si_strategy_name,
@@ -835,6 +842,7 @@ static void SimpleTimingCollectAndPrintLog()
                    timing->num_tiles_y,
                    timing->screen_width,
                    timing->screen_height,
+                   timing->zoom,
                    timing->transparent ? "yes" : "no",
                    timing->no_interlace ? "no" : "yes",
                    timing->no_collect ? "no" : "yes",
@@ -1005,7 +1013,9 @@ static int SimpleTimingDoRender()
     icetSingleImageStrategy(g_single_image_strategy);
 
     /* Set up the projection matrix. */
-    icetMatrixFrustum(-0.65*aspect, 0.65*aspect, -0.65, 0.65, 3.0, 5.0,
+    icetMatrixFrustum(-0.65*aspect/g_zoom, 0.65*aspect/g_zoom,
+                      -0.65/g_zoom, 0.65/g_zoom,
+                      3.0, 5.0,
                       projection_matrix);
 
     if (rank%10 < 7) {
@@ -1149,6 +1159,7 @@ static int SimpleTimingDoRender()
         timing_array[frame].num_tiles_y = g_num_tiles_y;
         timing_array[frame].screen_width = SCREEN_WIDTH;
         timing_array[frame].screen_height = SCREEN_HEIGHT;
+        timing_array[frame].zoom = g_zoom;
         timing_array[frame].transparent = g_transparent;
         timing_array[frame].no_interlace = g_no_interlace;
         timing_array[frame].no_collect = g_no_collect;
@@ -1581,6 +1592,7 @@ int SimpleTimingRun()
                "tiles y,"
                "width,"
                "height,"
+               "zoom,"
                "transparent,"
                "interlacing,"
                "collection,"
