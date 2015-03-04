@@ -50,6 +50,7 @@ typedef struct {
     IceTBoolean transparent;
     IceTBoolean no_interlace;
     IceTBoolean no_collect;
+    IceTBoolean dense_images;
     IceTInt max_image_split;
     IceTInt frame_number;
     IceTDouble render_time;
@@ -105,6 +106,7 @@ static IceTBoolean g_colored_background;
 static IceTBoolean g_no_interlace;
 static IceTBoolean g_no_collect;
 static IceTBoolean g_use_callback;
+static IceTBoolean g_dense_images;
 static IceTBoolean g_sync_render;
 static IceTBoolean g_write_image;
 static IceTEnum g_strategy;
@@ -133,6 +135,7 @@ static void usage(char *argv[])
     printstat("  -no-collect   Turn off image collection.\n");
     printstat("  -use-callback Do the drawing in an IceT callback.\n");
     printstat("  -sync-render  Synchronize rendering by adding a barrier to the draw callback.\n");
+    printstat("  -dense-images Composite dense images by classifying no pixels as background.\n");
     printstat("  -write-image  Write an image on the first frame.\n");
     printstat("  -reduce       Use the reduce strategy (default).\n");
     printstat("  -vtree        Use the virtual trees strategy.\n");
@@ -168,6 +171,7 @@ static void parse_arguments(int argc, char *argv[])
     g_no_interlace = ICET_FALSE;
     g_no_collect = ICET_FALSE;
     g_use_callback = ICET_FALSE;
+    g_dense_images = ICET_FALSE;
     g_sync_render = ICET_FALSE;
     g_write_image = ICET_FALSE;
     g_strategy = ICET_STRATEGY_REDUCE;
@@ -205,6 +209,8 @@ static void parse_arguments(int argc, char *argv[])
             g_no_collect = ICET_TRUE;
         } else if (strcmp(argv[arg], "-use-callback") == 0) {
             g_use_callback = ICET_TRUE;
+        } else if (strcmp(argv[arg], "-dense-images") == 0) {
+            g_dense_images = ICET_TRUE;
         } else if (strcmp(argv[arg], "-sync-render") == 0) {
             g_sync_render = ICET_TRUE;
         } else if (strcmp(argv[arg], "-write-image") == 0) {
@@ -355,11 +361,14 @@ static void draw(const IceTDouble *projection_matrix,
     IceTInt pixel_y;
     IceTDouble ray_origin[3];
     IceTDouble ray_direction[3];
+    IceTFloat background_depth;
+    IceTFloat background_alpha;
 
     icetMatrixMultiply(transform, projection_matrix, modelview_matrix);
 
     success = icetMatrixInverseTranspose((const IceTDouble *)transform,
                                          inverse_transpose_transform);
+
     if (!success) {
         printrank("ERROR: Inverse failed.\n");
     }
@@ -381,6 +390,39 @@ static void draw(const IceTDouble *projection_matrix,
     } else {
         colors_byte = icetImageGetColorub(result);
         depths = icetImageGetDepthf(result);
+    }
+
+    if (!g_dense_images) {
+        background_depth = 1.0f;
+        background_alpha = background_color[3];
+    } else {
+        IceTSizeType pixel_index;
+
+        /* To fake dense images, use a depth and alpha for the background that
+         * IceT will not recognize as background. */
+        background_depth = 0.999f;
+        background_alpha
+                = (background_color[3] == 0) ? 0.001 : background_color[3];
+
+        /* Clear out the the images to background so that pixels outside of
+         * the contained viewport have valid values. */
+        for (pixel_index = 0; pixel_index < width*height; pixel_index++) {
+            if (g_transparent) {
+                IceTFloat *color_dest = colors_float + 4*pixel_index;
+                color_dest[0] = background_color[0];
+                color_dest[1] = background_color[1];
+                color_dest[2] = background_color[2];
+                color_dest[3] = background_alpha;
+            } else {
+                IceTUByte *color_dest = colors_byte + 4*pixel_index;
+                IceTFloat *depth_dest = depths + pixel_index;
+                color_dest[0] = (IceTUByte)(background_color[0]*255);
+                color_dest[1] = (IceTUByte)(background_color[1]*255);
+                color_dest[2] = (IceTUByte)(background_color[2]*255);
+                color_dest[3] = (IceTUByte)(background_alpha*255);
+                depth_dest[0] = background_depth;
+            }
+        }
     }
 
     ray_direction[0] = ray_direction[1] = 0.0;
@@ -426,6 +468,7 @@ static void draw(const IceTDouble *projection_matrix,
                     /* Modify color by an opacity determined by thickness. */
                     IceTDouble thickness = far_distance - near_distance;
                     IceTDouble opacity = QUICK_OPACITY(4.0*thickness);
+                    if (opacity < 0.001) { opacity = 0.001; }
                     color[0] *= (IceTFloat)opacity;
                     color[1] *= (IceTFloat)opacity;
                     color[2] *= (IceTFloat)opacity;
@@ -435,8 +478,8 @@ static void draw(const IceTDouble *projection_matrix,
                 color[0] = background_color[0];
                 color[1] = background_color[1];
                 color[2] = background_color[2];
-                color[3] = background_color[3];
-                depth = 1.0f;
+                color[3] = background_alpha;
+                depth = background_depth;
             }
 
             if (g_transparent) {
@@ -834,7 +877,7 @@ static void SimpleTimingCollectAndPrintLog()
 
         for (log_index = 0; log_index < total_logs; log_index++) {
             timings_type *timing = all_logs + log_index;
-            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%0.1f,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
+            printf("LOG,%d,%s,%s,%d,%d,%d,%d,%0.1f,%s,%s,%s,%s,%d,%d,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%lg,%ld,%lg\n",
                    timing->num_proc,
                    timing->strategy_name,
                    timing->si_strategy_name,
@@ -846,6 +889,7 @@ static void SimpleTimingCollectAndPrintLog()
                    timing->transparent ? "yes" : "no",
                    timing->no_interlace ? "no" : "yes",
                    timing->no_collect ? "no" : "yes",
+                   timing->dense_images ? "yes" : "no",
                    timing->max_image_split,
                    timing->frame_number,
                    timing->render_time,
@@ -963,9 +1007,9 @@ static int SimpleTimingDoRender()
         icetEnable(ICET_COLLECT_IMAGES);
     }
 
-    /* Give IceT the bounds of the polygons that will be drawn.  Note that IceT
-     * will take care of any transformation that gets passed to
-     * icetDrawFrame. */
+    /* Give IceT the bounds of the polygons that will be drawn.  Note that
+         * IceT will take care of any transformation that gets passed to
+         * icetDrawFrame. */
     icetBoundingBoxd(-0.5f, 0.5f, -0.5, 0.5, -0.5, 0.5);
 
     /* Determine the region we want the local geometry to be in.  This will be
@@ -1121,6 +1165,12 @@ static int SimpleTimingDoRender()
             }
         }
 
+        if (g_dense_images) {
+            /* With dense images, we want IceT to load in all pixels, so clear
+             * out the bounding box/vertices. */
+            icetBoundingVertices(0, ICET_VOID, 0, 0, NULL);
+        }
+
         /* Get everyone to start at the same time. */
         icetCommBarrier();
 
@@ -1163,6 +1213,7 @@ static int SimpleTimingDoRender()
         timing_array[frame].transparent = g_transparent;
         timing_array[frame].no_interlace = g_no_interlace;
         timing_array[frame].no_collect = g_no_collect;
+        timing_array[frame].dense_images = g_dense_images;
         timing_array[frame].max_image_split = max_image_split;
         timing_array[frame].frame_number = frame;
         icetGetDoublev(ICET_RENDER_TIME,
@@ -1596,6 +1647,7 @@ int SimpleTimingRun()
                "transparent,"
                "interlacing,"
                "collection,"
+               "dense images,"
                "max image split,"
                "frame,"
                "render time,"
