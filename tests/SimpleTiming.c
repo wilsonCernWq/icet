@@ -211,6 +211,8 @@ static void parse_arguments(int argc, char *argv[])
             g_use_callback = ICET_TRUE;
         } else if (strcmp(argv[arg], "-dense-images") == 0) {
             g_dense_images = ICET_TRUE;
+            /* Turn of interlacing. It won't help here. */
+            g_no_interlace = ICET_TRUE;
         } else if (strcmp(argv[arg], "-sync-render") == 0) {
             g_sync_render = ICET_TRUE;
         } else if (strcmp(argv[arg], "-write-image") == 0) {
