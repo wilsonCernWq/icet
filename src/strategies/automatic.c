@@ -21,8 +21,8 @@ void icetAutomaticCompose(const IceTInt *compose_group,
                           IceTSizeType *piece_offset)
 {
     if (group_size > 1) {
-        icetRaiseDebug("Doing radix-k compose");
-        icetInvokeSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_RADIXK,
+        icetRaiseDebug("Doing radix-kr compose");
+        icetInvokeSingleImageStrategy(ICET_SINGLE_IMAGE_STRATEGY_RADIXKR,
                                       compose_group,
                                       group_size,
                                       image_dest,
@@ -34,7 +34,7 @@ void icetAutomaticCompose(const IceTInt *compose_group,
         *result_image = input_image;
         *piece_offset = 0;
     } else {
-	icetRaiseDebug("Clearing pixels");
+        icetRaiseDebug("Clearing pixels");
         icetClearSparseImage(input_image);
         *result_image = input_image;
         *piece_offset = 0;

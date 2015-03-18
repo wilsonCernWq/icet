@@ -117,6 +117,7 @@ static IceTBoolean g_do_image_split_study;
 static IceTInt g_min_image_split;
 static IceTBoolean g_do_scaling_study_factor_2;
 static IceTBoolean g_do_scaling_study_factor_2_3;
+static IceTInt g_num_scaling_study_random;
 
 static float g_color[4];
 
@@ -141,7 +142,9 @@ static void usage(char *argv[])
     printstat("  -vtree        Use the virtual trees strategy.\n");
     printstat("  -sequential   Use the sequential strategy.\n");
     printstat("  -bswap        Use the binary-swap single-image strategy.\n");
+    printstat("  -bswapfold    Use the binary-swap with folding single-image strategy.\n");
     printstat("  -radixk       Use the radix-k single-image strategy.\n");
+    printstat("  -radixkr      Use the radix-kr single-image strategy.\n");
     printstat("  -tree         Use the tree single-image strategy.\n");
     printstat("  -magic-k-study <num> Use the radix-k single-image strategy and repeat for\n"
            "                   multiple values of k, up to <num>, doubling each time.\n");
@@ -153,6 +156,10 @@ static void usage(char *argv[])
               "                process counts that are a factor of 2 plus all process\n"
               "                counts that are a factor of 3 plus most process counts\n"
               "                that have factors of 2 and 3.\n");
+    printstat("  -scaling-study-random <num> Picks a random number to bifurcate the\n"
+              "                processes and runs the compositing on each of them. This\n"
+              "                experiment is run <num> times. Run enough times this test\n"
+              "                should give performance over scales at odd process counts.\n");
     printstat("  -h, -help     Print this help message.\n");
     printstat("\nFor general testing options, try -h or -help before test name.\n");
 }
@@ -182,6 +189,7 @@ static void parse_arguments(int argc, char *argv[])
     g_min_image_split = 0;
     g_do_scaling_study_factor_2 = ICET_FALSE;
     g_do_scaling_study_factor_2_3 = ICET_FALSE;
+    g_num_scaling_study_random = 0;
 
     for (arg = 1; arg < argc; arg++) {
         if (strcmp(argv[arg], "-tilesx") == 0) {
@@ -225,24 +233,31 @@ static void parse_arguments(int argc, char *argv[])
             g_strategy = ICET_STRATEGY_SEQUENTIAL;
         } else if (strcmp(argv[arg], "-bswap") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_BSWAP;
+        } else if (strcmp(argv[arg], "-bswapfold") == 0) {
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_BSWAP_FOLDING;
         } else if (strcmp(argv[arg], "-radixk") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXK;
+        } else if (strcmp(argv[arg], "-radixkr") == 0) {
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXKR;
         } else if (strcmp(argv[arg], "-tree") == 0) {
             g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_TREE;
         } else if (strcmp(argv[arg], "-magic-k-study") == 0) {
             g_do_magic_k_study = ICET_TRUE;
-            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXK;
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXKR;
             arg++;
             g_max_magic_k = atoi(argv[arg]);
         } else if (strcmp(argv[arg], "-max-image-split-study") == 0) {
             g_do_image_split_study = ICET_TRUE;
-            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXK;
+            g_single_image_strategy = ICET_SINGLE_IMAGE_STRATEGY_RADIXKR;
             arg++;
             g_min_image_split = atoi(argv[arg]);
         } else if (strcmp(argv[arg], "-scaling-study-factor-2") == 0) {
             g_do_scaling_study_factor_2 = ICET_TRUE;
         } else if (strcmp(argv[arg], "-scaling-study-factor-2-3") == 0) {
             g_do_scaling_study_factor_2_3 = ICET_TRUE;
+        } else if (strcmp(argv[arg], "-scaling-study-random") == 0) {
+            arg++;
+            g_num_scaling_study_random = atoi(argv[arg]);
         } else if (   (strcmp(argv[arg], "-h") == 0)
                    || (strcmp(argv[arg], "-help")) ) {
             usage(argv);
@@ -1099,6 +1114,13 @@ static int SimpleTimingDoRender()
         icetGetIntegerv(ICET_MAGIC_K, &magic_k);
         sprintf(name_buffer, "radix-k %d", (int)magic_k);
         si_strategy_name = name_buffer;
+    } else if (g_single_image_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXKR) {
+            static char name_buffer[256];
+            IceTInt magic_k;
+
+            icetGetIntegerv(ICET_MAGIC_K, &magic_k);
+            sprintf(name_buffer, "radix-kr %d", (int)magic_k);
+            si_strategy_name = name_buffer;
     } else {
         si_strategy_name = icetGetSingleImageStrategyName();
     }
@@ -1615,6 +1637,69 @@ static int SimpleTimingDoScalingStudyFactor2_3()
     return worst_result;
 }
 
+static int SimpleTimingDoScalingStudyRandom()
+{
+    IceTInt size;
+    IceTInt rank;
+    IceTInt min_size = g_num_tiles_x*g_num_tiles_y;
+    IceTContext original_context = icetGetContext();
+    int worst_result = TEST_PASSED;
+    IceTInt trial;
+    IceTInt *pivots;
+
+    icetGetIntegerv(ICET_NUM_PROCESSES, &size);
+    icetGetIntegerv(ICET_RANK, &rank);
+
+    /* Choose pivot points to bifurcate processes. Do them all at once here
+     * so the psudorandom numbers do not interfear with those choosen during
+     * the rendering. */
+    pivots = malloc(sizeof(IceTInt)*g_num_scaling_study_random);
+    srand(g_seed);
+    for (trial = 0; trial < g_num_scaling_study_random; trial++) {
+        pivots[trial] = rand()%size;
+    }
+
+    for (trial = 0; trial < g_num_scaling_study_random; trial++) {
+        IceTCommunicator left_comm;
+        IceTCommunicator right_comm;
+        IceTInt left_size;
+        IceTInt right_size;
+        IceTInt local_size;
+        int result;
+
+        /* Print out results from last run. */
+        SimpleTimingCollectAndPrintLog();
+
+        left_size = pivots[trial];
+        right_size = size-left_size;
+
+        left_comm = MakeCommSubset(left_size, 0);
+        right_comm = MakeCommSubset(right_size, left_size);
+
+        if (rank < left_size) {
+            icetCreateContext(left_comm);
+            left_comm->Destroy(left_comm);
+            local_size = left_size;
+        } else {
+            icetCreateContext(right_comm);
+            right_comm->Destroy(right_comm);
+            local_size = right_size;
+        }
+
+        if (local_size > min_size) {
+            result = SimpleTimingDoParameterStudies();
+            if (result != TEST_PASSED) { worst_result = result; }
+        }
+
+        icetDestroyContext(icetGetContext());
+        icetSetContext(original_context);
+    }
+
+    free(pivots);
+
+    return worst_result;
+}
+
 static int SimpleTimingDoScalingStudies()
 {
     int result;
@@ -1624,6 +1709,13 @@ static int SimpleTimingDoScalingStudies()
         result = SimpleTimingDoScalingStudyFactor2();
     } else {
         result = SimpleTimingDoParameterStudies();
+    }
+
+    if (g_num_scaling_study_random > 0) {
+        int new_result = SimpleTimingDoScalingStudyRandom();
+        if (new_result != TEST_PASSED) {
+            result = new_result;
+        }
     }
 
     SimpleTimingCollectAndPrintLog();

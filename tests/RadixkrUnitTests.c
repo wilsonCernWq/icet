@@ -14,9 +14,7 @@
 
 #include <stdlib.h>
 
-extern ICET_EXPORT IceTBoolean icetRadixkPartitionLookupUnitTest(void);
-
-extern ICET_EXPORT IceTBoolean icetRadixkTelescopeSendReceiveTest(void);
+extern ICET_EXPORT IceTBoolean icetRadixkrPartitionLookupUnitTest(void);
 
 static int RadixkUnitTestsRun(void)
 {
@@ -27,18 +25,14 @@ static int RadixkUnitTestsRun(void)
         return TEST_PASSED;
     }
 
-    if (!icetRadixkPartitionLookupUnitTest()) {
-        return TEST_FAILED;
-    }
-
-    if (!icetRadixkTelescopeSendReceiveTest()) {
+    if (!icetRadixkrPartitionLookupUnitTest()) {
         return TEST_FAILED;
     }
 
     return TEST_PASSED;
 }
 
-int RadixkUnitTests(int argc, char *argv[])
+int RadixkrUnitTests(int argc, char *argv[])
 {
     /* To remove warning. */
     (void)argc;

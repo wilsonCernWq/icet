@@ -75,21 +75,31 @@
     _depth_format = icetSparseImageGetDepthFormat(INPUT_SPARSE_IMAGE);
     _pixel_count = icetSparseImageGetNumPixels(INPUT_SPARSE_IMAGE);
 
-    if (   (_color_format != icetImageGetColorFormat(OUTPUT_IMAGE))
-        || (_depth_format != icetImageGetDepthFormat(OUTPUT_IMAGE))
-#ifdef PIXEL_COUNT
-        || (_pixel_count  != PIXEL_COUNT)
-#else
-        || (_pixel_count  != icetImageGetNumPixels(OUTPUT_IMAGE))
-#endif
-#ifdef OFFSET
-        || (_pixel_count > icetImageGetNumPixels(OUTPUT_IMAGE) - OFFSET)
-#endif
-           )
-    {
-        icetRaiseError("Input/output buffers do not agree for decompression.",
+    if (_color_format != icetImageGetColorFormat(OUTPUT_IMAGE)) {
+        icetRaiseError("Input/output buffers have different color formats.",
                        ICET_SANITY_CHECK_FAIL);
     }
+    if (_depth_format != icetImageGetDepthFormat(OUTPUT_IMAGE)) {
+        icetRaiseError("Input/output buffers have different depth formats.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
+#ifdef PIXEL_COUNT
+    if (_pixel_count  != PIXEL_COUNT) {
+        icetRaiseError("Unexpected input pixel count.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
+#else
+    if (_pixel_count  != icetImageGetNumPixels(OUTPUT_IMAGE)) {
+        icetRaiseError("Unexpected input pixel count.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
+#endif
+#ifdef OFFSET
+    if (_pixel_count > icetImageGetNumPixels(OUTPUT_IMAGE) - OFFSET) {
+        icetRaiseError("Offset pixels outside range of output image.",
+                       ICET_SANITY_CHECK_FAIL);
+    }
+#endif
 
     if (_composite_mode == ICET_COMPOSITE_MODE_Z_BUFFER) {
         if (_depth_format == ICET_IMAGE_DEPTH_FLOAT) {
