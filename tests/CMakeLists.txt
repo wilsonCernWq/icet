@@ -5,7 +5,7 @@
 ## This source code is released under the New BSD License.
 #
 
-IF (ICET_USE_OPENGL)
+IF (ICET_USE_OPENGL AND NOT ICET_USE_OFFSCREEN_EGL)
   SET(ICET_OPENGL_WINDOW_LIBRARY GLUT
     CACHE STRING
     "The name of the library the IceT tests will use to create windows for
@@ -36,7 +36,7 @@ OpenGL contexts. Supported values are GLUT and GLFW."
   ELSE ()
     MESSAGE(SEND_ERROR "Invalid value for ICET_OPENGL_WINDOW_LIBRARY: ${ICET_OPENGL_WINDOW_LIBRARY}")
   ENDIF ()
-ENDIF (ICET_USE_OPENGL)
+ENDIF ()
 
 IF (NOT ICET_TESTS_USE_OPENGL)
   MESSAGE(STATUS "Most tests require ICET_USE_OPENGL and GLUT or GLFW. Those tests are disabled.")
