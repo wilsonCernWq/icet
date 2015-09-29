@@ -37,6 +37,8 @@ static int windowId;
 static GLFWwindow *window;
 #endif
 
+#include "test_codes.h"
+
 static void checkOglError(void)
 {
     GLenum error = glGetError();

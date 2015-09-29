@@ -1491,10 +1491,11 @@ static int SimpleTimingDoScalingStudyFactor2()
         }
         if (has_group) {
             IceTContext new_context;
+            int result;
             new_context = icetCreateContext(new_comm);
             new_comm->Destroy(new_comm);
 
-            int result = SimpleTimingDoParameterStudies();
+            result = SimpleTimingDoParameterStudies();
             if (result != TEST_PASSED) { worst_result = result; }
 
             icetSetContext(original_context);
