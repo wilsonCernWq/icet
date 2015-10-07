@@ -22,7 +22,7 @@ OpenGL contexts. Supported values are GLUT and GLFW."
       SET(ICET_TESTS_USE_OPENGL 1)
       SET(ICET_TESTS_USE_GLUT 1)
     ELSE (GLUT_FOUND)
-      MESSAGE(WARNING "Cannot find GLUT library. OpenGL tests disabled.")
+      MESSAGE(STATUS "Cannot find GLUT library. OpenGL tests disabled.")
     ENDIF (GLUT_FOUND)
   ELSEIF (ICET_OPENGL_WINDOW_LIBRARY STREQUAL GLFW)
     FIND_PACKAGE(GLFW)
