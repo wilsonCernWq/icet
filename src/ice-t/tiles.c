@@ -131,6 +131,7 @@ int  icetAddTile(IceTInt x, IceTInt y, IceTSizeType width, IceTSizeType height,
 
   /* Return index to tile. */
     return num_tiles;
+#undef MSG_LEN
 }
 
 void icetPhysicalRenderSize(IceTInt width, IceTInt height)

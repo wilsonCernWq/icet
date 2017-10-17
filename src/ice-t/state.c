@@ -122,6 +122,8 @@ void icetStateSetDefaults(void)
     IceTInt *int_array;
     int i;
     int comm_size, comm_rank;
+#define ENV_BUFFER_LEN 128
+    char env_buffer[128];
 
     icetDiagnostics(ICET_DIAG_ALL_NODES | ICET_DIAG_WARNINGS);
 
@@ -157,8 +159,8 @@ void icetStateSetDefaults(void)
     icetStateSetInteger(ICET_DATA_REPLICATION_GROUP_SIZE, 1);
     icetStateSetInteger(ICET_FRAME_COUNT, 0);
 
-    if (getenv("ICET_MAGIC_K") != NULL) {
-        IceTInt magic_k = atoi(getenv("ICET_MAGIC_K"));
+    if (icetGetEnv("ICET_MAGIC_K", env_buffer, ENV_BUFFER_LEN)) {
+        IceTInt magic_k = atoi(env_buffer);
         if (magic_k > 1) {
             icetStateSetInteger(ICET_MAGIC_K, magic_k);
         } else {
@@ -171,8 +173,8 @@ void icetStateSetDefaults(void)
         icetStateSetInteger(ICET_MAGIC_K, ICET_MAGIC_K_DEFAULT);
     }
 
-    if (getenv("ICET_MAX_IMAGE_SPLIT") != NULL) {
-        IceTInt max_image_split = atoi(getenv("ICET_MAX_IMAGE_SPLIT"));
+    if (icetGetEnv("ICET_MAX_IMAGE_SPLIT", env_buffer, ENV_BUFFER_LEN)) {
+        IceTInt max_image_split = atoi(env_buffer);
         if (max_image_split > 0) {
             icetStateSetInteger(ICET_MAX_IMAGE_SPLIT, max_image_split);
         } else {

@@ -81,3 +81,47 @@ IceTInt icetTypeWidth(IceTEnum type)
 
     return 0;
 }
+
+#ifndef WIN32
+IceTBoolean icetGetEnv(const char *variable_name,
+                       char *buffer,
+                       IceTSizeType buffer_size)
+{
+    const char *value = getenv(variable_name);
+    if (value != NULL)
+    {
+        strncpy(buffer, value, buffer_size);
+        return ICET_TRUE;
+    } else {
+        buffer[0] = '\0';
+        return ICET_FALSE;
+    }
+}
+
+void icetPutEnv(const char *name, const char *value)
+{
+    setenv(name, value, ICET_TRUE);
+}
+#else /*WIN32*/
+IceTBoolean icetGetEnv(const char *variable_name,
+                       char *buffer,
+                       IceTSizeType buffer_size)
+{
+    size_t required_size; /* Not really used. */
+    errno_t error;
+
+    error = getenv_s(&required_size, buffer, buffer_size, variable_name);
+    if ((error == 0) && (required_size > 0))
+    {
+        return ICET_TRUE;
+    } else {
+        buffer[0] = '\0';
+        return ICET_FALSE;
+    }
+}
+
+void icetPutEnv(const char *name, const char *value)
+{
+    _putenv_s(name, value);
+}
+#endif /*WIN32*/
