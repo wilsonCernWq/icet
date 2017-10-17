@@ -246,6 +246,13 @@ MACRO(ICET_ADD_LIBRARY library_name)
     )
   SET(icet_library_sources ${ARGN})
   ADD_LIBRARY(${library_name} ${icet_library_sources})
+  # Make sure libraries go to lib directory and dll go to bin directory.
+  # Mostly important on Windows.
+  SET_TARGET_PROPERTIES(${library_name} PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${ICET_LIBRARY_DIR}
+    LIBRARY_OUTPUT_DIRECTORY ${ICET_LIBRARY_DIR}
+    RUNTIME_OUTPUT_DIRECTORY ${ICET_EXECUTABLE_DIR}
+    )
   IF (ICET_C_FLAGS_WARN)
     SET_SOURCE_FILES_PROPERTIES(${icet_library_sources}
       PROPERTIES COMPILE_FLAGS ${ICET_C_FLAGS_WARN}
