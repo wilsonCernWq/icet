@@ -57,9 +57,9 @@
         || (_depth_format != icetSparseImageGetDepthFormat(BACK_SPARSE_IMAGE))
         || (_depth_format != icetSparseImageGetDepthFormat(DEST_SPARSE_IMAGE))
            ) {
-        icetRaiseError("Input buffers do not agree for compressed-compressed"
-                       " composite.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Input buffers do not agree for compressed-compressed"
+                       " composite.");
     }
 
     if (_composite_mode == ICET_COMPOSITE_MODE_Z_BUFFER) {
@@ -158,15 +158,18 @@
 #include "cc_composite_template_body.h"
 #undef UNPACK_PIXEL
             } else {
-                icetRaiseError("Encountered invalid color format.",
-                               ICET_SANITY_CHECK_FAIL);
+                icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                               "Encountered invalid color format 0x%X.",
+                               _color_format);
             }
         } else if (_depth_format == ICET_IMAGE_DEPTH_NONE) {
-            icetRaiseError("Cannot use Z buffer compositing operation with no"
-                           " Z buffer.", ICET_INVALID_OPERATION);
+            icetRaiseError(ICET_INVALID_OPERATION,
+                           "Cannot use Z buffer compositing operation with no"
+                           " Z buffer.");
         } else {
-            icetRaiseError("Encountered invalid depth format.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Encountered invalid depth format 0x%X.",
+                           _depth_format);
         }
     } else if (_composite_mode == ICET_COMPOSITE_MODE_BLEND) {
       /* Use alpha for active pixel and compositing. */
@@ -214,20 +217,22 @@
 #include "cc_composite_template_body.h"
 #undef UNPACK_PIXEL
             } else if (_color_format == ICET_IMAGE_COLOR_NONE) {
-                icetRaiseWarning("Compositing image with no data.",
-                                 ICET_INVALID_OPERATION);
+                icetRaiseWarning(ICET_INVALID_OPERATION,
+                                 "Compositing image with no data.");
                 icetClearSparseImage(DEST_SPARSE_IMAGE);
             } else {
-                icetRaiseError("Encountered invalid color format.",
-                               ICET_SANITY_CHECK_FAIL);
+                icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                               "Encountered invalid color format 0x%X.",
+                               _color_format);
             }
         } else {
-            icetRaiseError("Cannot use blend composite with a depth buffer.",
-                           ICET_INVALID_VALUE);
+            icetRaiseError(ICET_INVALID_VALUE,
+                           "Cannot use blend composite with a depth buffer.");
         }
     } else {
-        icetRaiseError("Encountered invalid composite mode.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Encountered invalid composite mode 0x%X.",
+                       _composite_mode);
     }
 }
 

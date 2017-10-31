@@ -76,7 +76,7 @@ IceTInt icetTypeWidth(IceTEnum type)
       case ICET_NULL:
           return 0;
       default:
-          icetRaiseError("Bad type identifier.", ICET_INVALID_VALUE);
+          icetRaiseError(ICET_INVALID_VALUE, "Bad type identifier %d.", type);
     }
 
     return 0;

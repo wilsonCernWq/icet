@@ -76,28 +76,28 @@
     _pixel_count = icetSparseImageGetNumPixels(INPUT_SPARSE_IMAGE);
 
     if (_color_format != icetImageGetColorFormat(OUTPUT_IMAGE)) {
-        icetRaiseError("Input/output buffers have different color formats.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Input/output buffers have different color formats.");
     }
     if (_depth_format != icetImageGetDepthFormat(OUTPUT_IMAGE)) {
-        icetRaiseError("Input/output buffers have different depth formats.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Input/output buffers have different depth formats.");
     }
 #ifdef PIXEL_COUNT
     if (_pixel_count  != PIXEL_COUNT) {
-        icetRaiseError("Unexpected input pixel count.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Unexpected input pixel count.");
     }
 #else
     if (_pixel_count  != icetImageGetNumPixels(OUTPUT_IMAGE)) {
-        icetRaiseError("Unexpected input pixel count.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Unexpected input pixel count.");
     }
 #endif
 #ifdef OFFSET
     if (_pixel_count > icetImageGetNumPixels(OUTPUT_IMAGE) - OFFSET) {
-        icetRaiseError("Offset pixels outside range of output image.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Offset pixels outside range of output image.");
     }
 #endif
 
@@ -235,22 +235,25 @@
 #include "decompress_template_body.h"
 #undef COPY_PIXEL
             } else {
-                icetRaiseError("Encountered invalid color format.",
-                               ICET_SANITY_CHECK_FAIL);
+                icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                               "Encountered invalid color format 0x%X.",
+                               _color_format);
             }
         } else if (_depth_format == ICET_IMAGE_DEPTH_NONE) {
-            icetRaiseError("Cannot use Z buffer compositing operation with no"
-                           " Z buffer.", ICET_INVALID_OPERATION);
+            icetRaiseError(ICET_INVALID_OPERATION,
+                           "Cannot use Z buffer compositing operation with no"
+                           " Z buffer.");
         } else {
-            icetRaiseError("Encountered invalid depth format.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Encountered invalid depth format 0x%X.",
+                           _depth_format);
         }
     } else if (_composite_mode == ICET_COMPOSITE_MODE_BLEND) {
       /* Use alpha for active pixel and compositing. */
         if (_depth_format != ICET_IMAGE_DEPTH_NONE) {
-            icetRaiseWarning("Z buffer ignored during blend composite"
-                             " operation.  Output z buffer meaningless.",
-                             ICET_INVALID_VALUE);
+            icetRaiseWarning(ICET_INVALID_VALUE,
+                             "Z buffer ignored during blend composite"
+                             " operation.  Output z buffer meaningless.");
         }
         if (_color_format == ICET_IMAGE_COLOR_RGBA_UBYTE) {
             IceTUInt *_color;
@@ -345,15 +348,15 @@
 #include "decompress_template_body.h"
 #undef COPY_PIXEL
         } else if (_color_format == ICET_IMAGE_COLOR_NONE) {
-            icetRaiseWarning("Decompressing image with no data.",
-                             ICET_INVALID_OPERATION);
+            icetRaiseWarning(ICET_INVALID_OPERATION,
+                             "Decompressing image with no data.");
         } else {
-            icetRaiseError("Encountered invalid color format.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Encountered invalid color format.");
         }
     } else {
-        icetRaiseError("Encountered invalid composite mode.",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Encountered invalid composite mode.");
     }
 
 #ifdef TIME_DECOMPRESSION
