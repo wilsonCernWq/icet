@@ -11,7 +11,6 @@
 #define __IceTDevDiagnostics_h
 
 #include <IceT.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {

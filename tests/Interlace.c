@@ -24,7 +24,7 @@
 
 /* Just something to set in the depth. */
 #define ACTIVE_DEPTH(x, y) \
-    (((x)+(y)+1.0)/10000.0)
+    (((x)+(y)+1.0f)/10000.0f)
 
 /* Fills the given image to have data in the lower triangle like this:
  *

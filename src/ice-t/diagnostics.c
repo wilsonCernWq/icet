@@ -13,6 +13,7 @@
 
 #include <IceTDevCommunication.h>
 #include <IceTDevContext.h>
+#include <IceTDevPorting.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,6 +25,8 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
+
+#define MAX_MESSAGE_LEN 1024
 
 static IceTEnum currentError = ICET_NO_ERROR;
 static IceTEnum currentLevel;
@@ -66,7 +69,9 @@ void icetRaiseDiagnostic(IceTEnum type,
     full_message[0] = '\0';
     offset = 0;
 #define ADD_TO_MESSAGE(...)                                                 \
-    offset += sprintf(full_message + offset, __VA_ARGS__);                  \
+    offset += icetSnprintf(full_message + offset,                           \
+                      ICET_MESSAGE_SIZE - offset,                           \
+                      __VA_ARGS__);                                         \
     if (offset > ICET_MESSAGE_SIZE) {                                       \
         printf("PANIC:%s:%d: Diagnostic message too large!\n", file, line); \
         icetStateDump();                                                    \
