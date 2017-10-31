@@ -265,8 +265,8 @@ static radixkInfo radixkGetK(IceTInt compose_group_size,
         info.num_rounds++;
 
         if (info.num_rounds > max_num_k) {
-            icetRaiseError("Somehow we got more factors than possible.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Somehow we got more factors than possible.");
         }
     }
 
@@ -279,8 +279,8 @@ static radixkInfo radixkGetK(IceTInt compose_group_size,
             product *= info.rounds[i].k;
         }
         if (product != compose_group_size) {
-            icetRaiseError("Product of k's not equal to number of processes.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Product of k's not equal to number of processes.");
         }
     }
 
@@ -775,8 +775,12 @@ static void radixkCompositeIncomingImages(radixkPartnerInfo *partners,
             = icetSparseImageUnpackageFromReceive(receiver->receiveBuffer);
         if (   (icetSparseImageGetWidth(receiver->receiveImage) != width)
             || (icetSparseImageGetHeight(receiver->receiveImage) != height) ) {
-            icetRaiseError("Radix-k received image with wrong size.",
-                           ICET_SANITY_CHECK_FAIL);
+            icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                           "Radix-k received image with wrong size "
+                           "(%dx%d) != (%dx%d)",
+                           icetSparseImageGetWidth(receiver->receiveImage),
+                           icetSparseImageGetHeight(receiver->receiveImage),
+                           width, height);
         }
 
         /* Try to composite that image. */
@@ -802,8 +806,8 @@ static void icetRadixkBasicCompose(const radixkInfo *info,
     /* Find your rank in your group. */
     IceTInt group_rank = icetFindMyRankInGroup(compose_group, group_size);
     if (group_rank < 0) {
-        icetRaiseError("Local process not in compose_group?",
-                       ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL,
+                       "Local process not in compose_group?");
         *piece_offset = 0;
         return;
     }
@@ -817,7 +821,7 @@ static void icetRadixkBasicCompose(const radixkInfo *info,
 
     /* num_rounds > 0 is assumed several places throughout this function */
     if (info->num_rounds <= 0) {
-        icetRaiseError("Radix-k has no rounds?", ICET_SANITY_CHECK_FAIL);
+        icetRaiseError(ICET_SANITY_CHECK_FAIL, "Radix-k has no rounds?");
     }
 
     /* Any peer we communicate with in round i starts that round with a block of
