@@ -27,8 +27,6 @@ extern "C" {
 ICET_EXPORT IceTInt icetTypeWidth(IceTEnum type);
 
 #ifdef WIN32
-#define snprintf(buffer, size, ...) \
-    _snprintf_s(buffer, size, _TRUNCATE, __VA_ARGS__)
 #define strncpy(dest, src, size) strncpy_s(dest, size, src, _TRUNCATE)
 #define fdopen _fdopen
 #endif
@@ -43,6 +41,11 @@ ICET_EXPORT IceTBoolean icetGetEnv(const char *variable_name,
 /* A portable version of putenv. This version takes the variable name and
    value as separate arguments. */
 ICET_EXPORT void icetPutEnv(const char *name, const char *value);
+
+/* A portable version of snprintf. The behavior might not be perfectly
+   consistent across platforms. */
+ICET_EXPORT IceTSizeType icetSnprintf(char *buffer, IceTSizeType size,
+                                      const char *format, ...);
 
 #ifdef __cplusplus
 }

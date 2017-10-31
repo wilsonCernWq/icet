@@ -1113,14 +1113,14 @@ static int SimpleTimingDoRender()
         IceTInt magic_k;
 
         icetGetIntegerv(ICET_MAGIC_K, &magic_k);
-        snprintf(name_buffer, 256, "radix-k %d", (int)magic_k);
+        icetSnprintf(name_buffer, 256, "radix-k %d", (int)magic_k);
         si_strategy_name = name_buffer;
     } else if (g_single_image_strategy == ICET_SINGLE_IMAGE_STRATEGY_RADIXKR) {
             static char name_buffer[256];
             IceTInt magic_k;
 
             icetGetIntegerv(ICET_MAGIC_K, &magic_k);
-            snprintf(name_buffer, 256, "radix-kr %d", (int)magic_k);
+            icetSnprintf(name_buffer, 256, "radix-kr %d", (int)magic_k);
             si_strategy_name = name_buffer;
     } else {
         si_strategy_name = icetGetSingleImageStrategyName();
@@ -1271,7 +1271,7 @@ static int SimpleTimingDoRender()
             IceTUByte *buffer = malloc(SCREEN_WIDTH*SCREEN_HEIGHT*4);
             char filename[256];
             icetImageCopyColorub(image, buffer, ICET_IMAGE_COLOR_RGBA_UBYTE);
-            snprintf(filename, 256, "SimpleTiming%02d.ppm", rank);
+            icetSnprintf(filename, 256, "SimpleTiming%02d.ppm", rank);
             write_ppm(filename, buffer, (int)SCREEN_WIDTH, (int)SCREEN_HEIGHT);
             free(buffer);
         }
@@ -1348,7 +1348,7 @@ static int SimpleTimingDoParameterStudies()
             char k_string[64];
             int retval;
 
-            snprintf(k_string, 64, "%d", magic_k);
+            icetSnprintf(k_string, 64, "%d", magic_k);
             icetPutEnv("ICET_MAGIC_K", k_string);
 
             /* This is a bit hackish.  The magic k value is set when the IceT
@@ -1385,7 +1385,7 @@ static int SimpleTimingDoParameterStudies()
             char image_split_string[64];
             int retval;
 
-            snprintf(image_split_string, 64, "%d", image_split);
+            icetSnprintf(image_split_string, 64, "%d", image_split);
             icetPutEnv("ICET_MAX_IMAGE_SPLIT", image_split_string);
 
             /* This is a bit hackish.  The max image split value is set when the

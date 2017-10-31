@@ -110,10 +110,10 @@ static void DisplayNoDrawDoTest(void)
             if (bad_count >= 10) {
                 char filename[256];
                 global_result = TEST_FAILED;
-                snprintf(filename, 256, "DisplayNoDraw_%s_%s_%d.ppm",
-                         icetGetStrategyName(),
-                         icetGetSingleImageStrategyName(),
-                         global_iteration);
+                icetSnprintf(filename, 256, "DisplayNoDraw_%s_%s_%d.ppm",
+                             icetGetStrategyName(),
+                             icetGetSingleImageStrategyName(),
+                             global_iteration);
                 write_ppm(filename, color_buffer,
                           (int)SCREEN_WIDTH, (int)SCREEN_HEIGHT);
             }

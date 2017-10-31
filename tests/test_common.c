@@ -220,7 +220,7 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
         } else {
             realstdout = NULL;
         }
-        snprintf(filename, 64, "log.%04d", rank);
+        icetSnprintf(filename, 64, "log.%04d", rank);
 #ifndef WIN32
         outfd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
         if (outfd < 0) {

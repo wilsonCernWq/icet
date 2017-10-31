@@ -120,9 +120,9 @@ static int compare_color_buffers(IceTSizeType local_width,
       /* Too many errors.  Call it bad. */
         printrank("Too many bad pixels!!!!!!\n");
       /* Write current images. */
-        snprintf(filename, FILENAME_MAX, "ref%03d.ppm", rank);
+        icetSnprintf(filename, FILENAME_MAX, "ref%03d.ppm", rank);
         write_ppm(filename, refcbuf, (int)SCREEN_WIDTH, (int)SCREEN_HEIGHT);
-        snprintf(filename, FILENAME_MAX, "bad%03d.ppm", rank);
+        icetSnprintf(filename, FILENAME_MAX, "bad%03d.ppm", rank);
         write_ppm(filename, cb, (int)local_width, (int)local_height);
       /* Write difference image. */
         for (y = 0; y < local_height; y++) {
@@ -146,7 +146,7 @@ static int compare_color_buffers(IceTSizeType local_width,
                 }
             }
         }
-        snprintf(filename, FILENAME_MAX, "diff%03d.ppm", rank);
+        icetSnprintf(filename, FILENAME_MAX, "diff%03d.ppm", rank);
         write_ppm(filename, cb, (int)local_width, (int)local_height);
         return 0;
     }
@@ -237,7 +237,7 @@ static int compare_depth_buffers(IceTSizeType local_width,
                 encoded[3] = 255;
             }
         }
-        snprintf(filename, FILENAME_MAX, "depth_error%03d.ppm", rank);
+        icetSnprintf(filename, FILENAME_MAX, "depth_error%03d.ppm", rank);
         write_ppm(filename, (IceTUByte *)errbuf,
                   (int)local_width, (int)local_height);
 

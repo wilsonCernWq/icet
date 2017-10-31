@@ -69,7 +69,7 @@ void icetRaiseDiagnostic(IceTEnum type,
     full_message[0] = '\0';
     offset = 0;
 #define ADD_TO_MESSAGE(...)                                                 \
-    offset += snprintf(full_message + offset,                               \
+    offset += icetSnprintf(full_message + offset,                           \
                       ICET_MESSAGE_SIZE - offset,                           \
                       __VA_ARGS__);                                         \
     if (offset > ICET_MESSAGE_SIZE) {                                       \

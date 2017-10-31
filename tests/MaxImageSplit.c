@@ -253,7 +253,7 @@ static int MaxImageSplitTryMax()
 
         printstat("Trying max image split of %d\n", max_image_split);
 
-        snprintf(image_split_string, 64, "%d", max_image_split);
+        icetSnprintf(image_split_string, 64, "%d", max_image_split);
         icetPutEnv("ICET_MAX_IMAGE_SPLIT", image_split_string);
 
         /* This is a bit hackish.  The max image split value is set when the

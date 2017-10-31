@@ -61,7 +61,7 @@ static IceTBoolean CheckPixel(const IceTImage image,
         buffer = malloc(4*icetImageGetWidth(image)*icetImageGetHeight(image));
         icetImageCopyColorub(image, buffer, ICET_IMAGE_COLOR_RGBA_UBYTE);
         icetGetIntegerv(ICET_RANK, &rank);
-        snprintf(filename, 255, "FloatingViewport_%d.ppm", rank);
+        icetSnprintf(filename, 255, "FloatingViewport_%d.ppm", rank);
         write_ppm(filename,
                   buffer,
                   icetImageGetWidth(image),

@@ -7,11 +7,17 @@
  * This source code is released under the New BSD License.
  */
 
+/* Turn on non-POSIX features of GNU. Many of these are widely available. */
+#define _GNU_SOURCE
+
 #include <IceTDevPorting.h>
 
 #include <IceT.h>
 
 #include <IceTDevDiagnostics.h>
+
+#include <stdlib.h>
+#include <stdarg.h>
 
 #ifndef WIN32
 #include <sys/time.h>
@@ -125,3 +131,20 @@ void icetPutEnv(const char *name, const char *value)
     _putenv_s(name, value);
 }
 #endif /*WIN32*/
+
+ICET_EXPORT IceTSizeType icetSnprintf(char *buffer, IceTSizeType size,
+                                      const char *format, ...)
+{
+    va_list format_args;
+    IceTSizeType num_written;
+
+    va_start(format_args, format);
+#ifdef WIN32
+    num_written = _vsnprintf_s(buffer, size, _TRUNCATE, format, format_args);
+#else
+    num_written = vsnprintf(buffer, size, format, format_args);
+#endif
+    va_end(format_args);
+
+    return num_written;
+}
