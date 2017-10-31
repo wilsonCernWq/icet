@@ -2241,8 +2241,6 @@ void icetDecompressSubImageCorrectBackground(
                                          IceTImage image)
 {
     IceTBoolean need_correction;
-    const IceTFloat *background_color;
-    const IceTUByte *background_color_word;
 
     icetGetBooleanv(ICET_NEED_BACKGROUND_CORRECTION, &need_correction);
     if (!need_correction) {
@@ -2252,10 +2250,6 @@ void icetDecompressSubImageCorrectBackground(
 
     ICET_TEST_IMAGE_HEADER(image);
     ICET_TEST_SPARSE_IMAGE_HEADER(compressed_image);
-
-    background_color = icetUnsafeStateGetFloat(ICET_TRUE_BACKGROUND_COLOR);
-    background_color_word =
-        (IceTUByte*)icetUnsafeStateGetInteger(ICET_TRUE_BACKGROUND_COLOR_WORD);
 
 #define INPUT_SPARSE_IMAGE      compressed_image
 #define OUTPUT_IMAGE            image

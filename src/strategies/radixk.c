@@ -438,9 +438,11 @@ static radixkPartnerInfo *radixkGetPartners(const radixkRoundInfo *round_info,
             = icetSparseImageSplitPartitionNumPixels(start_size,
                                                      current_k,
                                                      remaining_partitions);
+        /* Always send when splitting. */
         sending_data = ICET_TRUE;
     } else {
         partition_num_pixels = start_size;
+        /* Not splitting. Only send if receiving. */
         sending_data = !receiving_data;
     }
     sparse_image_size = icetSparseImageBufferSize(partition_num_pixels, 1);
@@ -450,8 +452,7 @@ static radixkPartnerInfo *radixkGetPartners(const radixkRoundInfo *round_info,
     } else {
         recv_buf_pool = NULL;
     }
-    if (round_info->split) {
-        /* Only need send buff when splitting, always need when splitting. */
+    if (sending_data) {
         send_buf_pool = icetGetStateBuffer(RADIXK_SEND_BUFFER,
                                            sparse_image_size * current_k);
     } else {
@@ -476,8 +477,7 @@ static radixkPartnerInfo *radixkGetPartners(const radixkRoundInfo *round_info,
             p->receiveBuffer = NULL;
         }
 
-        if (round_info->split) {
-            /* Only need send buff when splitting, always need when splitting.*/
+        if (sending_data) {
             send_buffer = ((IceTByte*)send_buf_pool + i*sparse_image_size);
             p->sendImage = icetSparseImageAssignBuffer(send_buffer,
                                                        partition_num_pixels, 1);
