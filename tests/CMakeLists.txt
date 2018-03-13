@@ -47,6 +47,7 @@ SET(IceTTestSrcs
   BackgroundCorrect.c
   CompressionSize.c
   FloatingViewport.c
+  ImageConvert.c
   Interlace.c
   MaxImageSplit.c
   OddImageSizes.c
