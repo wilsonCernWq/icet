@@ -19,14 +19,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/time.h>
 #else
 #include <windows.h>
 #include <winbase.h>
 #endif
 
-#ifndef WIN32
+#ifndef _WIN32
 double icetWallTime(void)
 {
     static struct timeval start = { 0, 0 };
@@ -45,7 +45,7 @@ double icetWallTime(void)
 
     return (tp->tv_sec - start.tv_sec) + 0.000001*(double)tp->tv_usec;
 }
-#else /*WIN32*/
+#else /*_WIN32*/
 double icetWallTime(void)
 {
     static DWORD start = 0;
@@ -58,7 +58,7 @@ double icetWallTime(void)
         return 0.001*(now-start);
     }
 }
-#endif /*WIN32*/
+#endif /*_WIN32*/
 
 IceTInt icetTypeWidth(IceTEnum type)
 {
@@ -88,7 +88,7 @@ IceTInt icetTypeWidth(IceTEnum type)
     return 0;
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 IceTBoolean icetGetEnv(const char *variable_name,
                        char *buffer,
                        IceTSizeType buffer_size)
@@ -108,7 +108,7 @@ void icetPutEnv(const char *name, const char *value)
 {
     setenv(name, value, ICET_TRUE);
 }
-#else /*WIN32*/
+#else /*_WIN32*/
 IceTBoolean icetGetEnv(const char *variable_name,
                        char *buffer,
                        IceTSizeType buffer_size)
@@ -130,7 +130,7 @@ void icetPutEnv(const char *name, const char *value)
 {
     _putenv_s(name, value);
 }
-#endif /*WIN32*/
+#endif /*_WIN32*/
 
 ICET_EXPORT IceTSizeType icetSnprintf(char *buffer, IceTSizeType size,
                                       const char *format, ...)
@@ -139,7 +139,7 @@ ICET_EXPORT IceTSizeType icetSnprintf(char *buffer, IceTSizeType size,
     IceTSizeType num_written;
 
     va_start(format_args, format);
-#ifdef WIN32
+#ifdef _WIN32
     num_written = _vsnprintf_s(buffer, size, _TRUNCATE, format, format_args);
 #else
     num_written = vsnprintf(buffer, size, format, format_args);

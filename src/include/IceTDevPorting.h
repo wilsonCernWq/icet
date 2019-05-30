@@ -26,7 +26,7 @@ extern "C" {
    etc.)  in bytes. */
 ICET_EXPORT IceTInt icetTypeWidth(IceTEnum type);
 
-#ifdef WIN32
+#ifdef _WIN32
 #define strncpy(dest, src, size) strncpy_s(dest, size, src, _TRUNCATE)
 #define fdopen _fdopen
 #endif

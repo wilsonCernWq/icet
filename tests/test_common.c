@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #else
 #include <io.h>
@@ -221,13 +221,13 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
             realstdout = NULL;
         }
         icetSnprintf(filename, 64, "log.%04d", rank);
-#ifndef WIN32
+#ifndef _WIN32
         outfd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
         if (outfd < 0) {
             printf("Could not open %s for writing.\n", filename);
             exit(1);
         }
-#else /*WIN32*/
+#else /*_WIN32*/
         if (_sopen_s(&outfd,
                      filename,
                      O_WRONLY | O_CREAT | O_APPEND,
@@ -236,7 +236,7 @@ void initialize_test(int *argcp, char ***argvp, IceTCommunicator comm)
             printf("Could not open %s for writing.\n", filename);
             exit(1);
         }
-#endif /*WIN32*/
+#endif /*_WIN32*/
         dup2(outfd, 1);
     } else {
         realstdout = stdout;
