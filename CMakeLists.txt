@@ -28,6 +28,8 @@ SET(ICET_MINOR_VERSION 2)
 SET(ICET_PATCH_VERSION 0)
 SET(ICET_VERSION "${ICET_MAJOR_VERSION}.${ICET_MINOR_VERSION}.${ICET_PATCH_VERSION}")
 
+set(OpenGL_GL_PREFERENCE GLVND)
+
 # CMake 2.8.12 and later supports an rpath mechanism on Mac OSX that allows
 # build and install targets to point to dependent libraries that are not
 # dependent on DYLD_LIBRARY_PATH. This variable turns that behavior on by
