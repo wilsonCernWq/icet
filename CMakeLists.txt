@@ -5,10 +5,7 @@
 ## This source code is released under the New BSD License.
 #
 
-<<<<<<< Updated upstream
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
-=======
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Turn off policy 0017, which makes modules packaged with CMake find
 # any module rather than just others packaged with CMake.  This is
@@ -22,7 +19,6 @@ ENDIF (POLICY CMP0042)
 IF (POLICY CMP0048)
   CMAKE_POLICY(SET CMP0048 OLD)
 ENDIF (POLICY CMP0048)
->>>>>>> Stashed changes
 
 PROJECT(ICET C)
 
