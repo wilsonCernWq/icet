@@ -5,7 +5,24 @@
 ## This source code is released under the New BSD License.
 #
 
+<<<<<<< Updated upstream
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
+=======
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+# Turn off policy 0017, which makes modules packaged with CMake find
+# any module rather than just others packaged with CMake.  This is
+# necessary for backward compatibility when included from ParaView.
+IF (POLICY CMP0017)
+  CMAKE_POLICY(SET CMP0017 OLD)
+ENDIF (POLICY CMP0017)
+IF (POLICY CMP0042)
+  CMAKE_POLICY(SET CMP0042 NEW)
+ENDIF (POLICY CMP0042)
+IF (POLICY CMP0048)
+  CMAKE_POLICY(SET CMP0048 OLD)
+ENDIF (POLICY CMP0048)
+>>>>>>> Stashed changes
 
 PROJECT(ICET C)
 
@@ -36,8 +53,10 @@ SET(CMAKE_MODULE_PATH
   )
 
 # Turn shared libraries on or off.
-OPTION(BUILD_SHARED_LIBS "Build IceT with shared libraries." OFF)
-SET(ICET_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+# OPTION(BUILD_SHARED_LIBS "Build IceT with shared libraries." OFF)
+# SET(ICET_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+SET(BUILD_SHARED_LIBS ON)
+SET(ICET_BUILD_SHARED_LIBS ON)
 
 # Options controlling support libraries
 OPTION(ICET_USE_OPENGL "Build OpenGL support layer for IceT." ON)
@@ -320,3 +339,11 @@ INCLUDE(CPack)
 # Allow local additions to this file without CVS conflicts.
 INCLUDE(${ICET_BINARY_DIR}/LocalUserOptions.cmake OPTIONAL)
 INCLUDE(${ICET_SOURCE_DIR}/LocalUserOptions.cmake OPTIONAL)
+
+# Finalize
+MARK_AS_ADVANCED(
+  ICET_BUILD_SHARED_LIBS
+  ICET_BUILD_TESTING
+  ICET_INSTALL_NO_DEVELOPMENT
+  ICET_MAGIC_K ICET_MAX_IMAGE_SPLIT
+  ICET_USE_MPI ICET_USE_OPENGL)
