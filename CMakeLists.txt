@@ -142,7 +142,7 @@ IF(CMAKE_C_COMPILER_ID STREQUAL "Clang")
 ENDIF()
 
 IF (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-  SET(ICET_C_FLAGS_WARN "-ansi -Wall -Wno-long-long -Wextra -Wformat-security -Wshadow -Wunused -Wreturn-type -Wpointer-arith -Wdeclaration-after-statement")
+  SET(ICET_C_FLAGS_WARN "-Wall -Wno-long-long -Wextra -Wformat-security -Wshadow -Wunused -Wreturn-type -Wpointer-arith -Wdeclaration-after-statement")
 ENDIF (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 
 # Configure testing support.
