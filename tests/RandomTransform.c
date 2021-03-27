@@ -772,5 +772,6 @@ int RandomTransform(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    icetGLInitialize();
     return run_test(RandomTransformRun);
 }

@@ -102,6 +102,7 @@ static void setupColorTexture()
     }
 
     glGenTextures(1, &color_texture_id);
+    glBindTexture(GL_TEXTURE_2D, color_texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     /* Do the format and type parameters matter if the data type is NULL? */
@@ -133,7 +134,7 @@ static void setupDepthTexture()
         GLint actual_width;
         GLint actual_height;
 
-        depth_texture_id = *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE);
+        depth_texture_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE);
         glBindTexture(GL_TEXTURE_2D, depth_texture_id);
         glGetTexLevelParameteriv(
                     GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &actual_width);
@@ -151,6 +152,7 @@ static void setupDepthTexture()
     }
 
     glGenTextures(1, &depth_texture_id);
+    glBindTexture(GL_TEXTURE_2D, depth_texture_id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);

@@ -5,7 +5,7 @@
 ## This source code is released under the New BSD License.
 #
 
-IF (ICET_USE_OPENGL AND NOT ICET_USE_OFFSCREEN_EGL)
+IF ((ICET_USE_OPENGL OR ICET_USE_OPENGL3) AND NOT ICET_USE_OFFSCREEN_EGL)
   SET(ICET_OPENGL_WINDOW_LIBRARY GLUT
     CACHE STRING
     "The name of the library the IceT tests will use to create windows for
@@ -39,10 +39,6 @@ OpenGL contexts. Supported values are GLUT and GLFW."
   ENDIF ()
 ENDIF ()
 
-IF (NOT ICET_TESTS_USE_OPENGL)
-  MESSAGE(STATUS "Most tests require ICET_USE_OPENGL and GLUT or GLFW. Those tests are disabled.")
-ENDIF (NOT ICET_TESTS_USE_OPENGL)
-
 SET(IceTTestSrcs
   BackgroundCorrect.c
   CompressionSize.c
@@ -66,6 +62,10 @@ SET(IceTOpenGLTestSrcs
   DisplayNoDraw.c
   RandomTransform.c
   SimpleExample.c
+  )
+
+SET(IceTOpenGL3TestSrcs
+  SimpleExampleOGL3.c
   )
 
 SET(UTIL_SRCS
@@ -130,7 +130,7 @@ FOREACH (test ${IceTTestSrcs})
   ENDIF (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.1)
 ENDFOREACH(test)
 
-IF (ICET_TESTS_USE_OPENGL)
+IF (ICET_TESTS_USE_OPENGL AND ICET_USE_OPENGL)
   CREATE_TEST_SOURCELIST(OpenGLTests icetTests_mpi_opengl.c ${IceTOpenGLTestSrcs}
     EXTRA_INCLUDE test_mpi_opengl.h
     FUNCTION init_mpi_opengl)
@@ -165,7 +165,44 @@ IF (ICET_TESTS_USE_OPENGL)
         )
     ENDIF (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.1)
   ENDFOREACH(test)
-ENDIF (ICET_TESTS_USE_OPENGL)
+ENDIF ()
+
+IF (ICET_TESTS_USE_OPENGL AND ICET_USE_OPENGL3)
+  CREATE_TEST_SOURCELIST(OpenGLTests icetTests_mpi_opengl3.c ${IceTOpenGL3TestSrcs}
+    EXTRA_INCLUDE test_mpi_opengl.h
+    FUNCTION init_mpi_opengl)
+
+  ADD_EXECUTABLE(icetTests_mpi_opengl3 ${OpenGLTests} ${UTIL_SRCS} ${TEST_HEADERS})
+  TARGET_LINK_LIBRARIES(icetTests_mpi_opengl3
+    IceTCore
+    IceTMPI
+    IceTGL3
+    )
+  IF (ICET_TESTS_USE_GLUT)
+    TARGET_LINK_LIBRARIES(icetTests_mpi_opengl3 ${GLUT_LIBRARIES})
+  ENDIF (ICET_TESTS_USE_GLUT)
+  IF (ICET_TESTS_USE_GLFW)
+    TARGET_LINK_LIBRARIES(icetTests_mpi_opengl3 ${GLFW_LIBRARY})
+  ENDIF (ICET_TESTS_USE_GLFW)
+
+  FOREACH (test ${IceTOpenGL3TestSrcs})
+    GET_FILENAME_COMPONENT(TName ${test} NAME_WE)
+    ADD_TEST(NAME IceT${TName}
+      COMMAND
+      ${PRE_TEST_FLAGS}
+      $<TARGET_FILE:icetTests_mpi_opengl> ${ICET_TEST_FLAGS} ${TName}
+      ${POST_TEST_FLAGS})
+    IF (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.1)
+      SET_TESTS_PROPERTIES(IceT${TName}
+        PROPERTIES FAIL_REGULAR_EXPRESSION
+        ":ERROR:;TEST NOT RUN;TEST NOT PASSED;TEST FAILED"
+        )
+      SET_TESTS_PROPERTIES(IceT${TName}
+        PROPERTIES PASS_REGULAR_EXPRESSION "Test Passed"
+        )
+    ENDIF (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.1)
+  ENDFOREACH(test)
+ENDIF ()
 
 ADD_CUSTOM_TARGET(logclean
   ${CMAKE_COMMAND} -E remove

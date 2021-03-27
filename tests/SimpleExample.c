@@ -232,5 +232,6 @@ int SimpleExample(int argc, char * argv[])
     (void)argc;
     (void)argv;
 
+    icetGLInitialize();
     return run_test(SimpleExampleRun);
 }

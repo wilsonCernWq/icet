@@ -161,9 +161,10 @@ static int BlankTilesRun()
 
 int BlankTiles(int argc, char *argv[])
 {
-  /* To remove warning */
-  (void)argc;
-  (void)argv;
+    /* To remove warning */
+    (void)argc;
+    (void)argv;
 
-  return run_test(BlankTilesRun);
+    icetGLInitialize();
+    return run_test(BlankTilesRun);
 }

@@ -110,5 +110,6 @@ int BoundsBehindViewer(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
+    icetGLInitialize();
     return run_test(BoundsBehindViewerRun);
 }
