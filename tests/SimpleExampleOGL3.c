@@ -100,7 +100,6 @@ static void draw(const GLdouble *projection_matrix,
     glFramebufferTexture2D(
         GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_texture, 0);
     glDrawBuffers(1, &draw_buffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     GetSphereArrays(&vertex_array, &normal_array);
     glVertexPointer(3, GL_FLOAT, 0, vertex_array);
@@ -117,6 +116,8 @@ static void draw(const GLdouble *projection_matrix,
     glLoadMatrixd(modelview_matrix);
     glTranslatef((float)rank, 0, 0);
     glDrawArrays(GL_QUADS, 0, SPHERE_NUM_VERTICES);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 static int SimpleExampleRun()
@@ -128,6 +129,9 @@ static int SimpleExampleRun()
      * the calling function (i.e. icetTests_mpi.c).  See the init_mpi in
      * test_mpi.h for an example.
      */
+    icetGL3Initialize();
+    icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
+    icetSetDepthFormat(ICET_IMAGE_DEPTH_FLOAT);
 
     /* If we had set up the communication layer ourselves, we could have
      * gotten these parameters directly from it.  Since we did not, this
@@ -205,7 +209,7 @@ static int SimpleExampleRun()
     }
 
     /* Here is an example of an animation loop. */
-    for (angle = 0; angle < 360; angle += 1) {
+    for (angle = 0; angle < 360; angle += 10) {
         IceTDouble projection_matrix[16];
         IceTDouble modelview_matrix[16];
         IceTImage composite_image;
@@ -230,26 +234,28 @@ static int SimpleExampleRun()
         composite_image = icetGL3DrawFrame(projection_matrix, modelview_matrix);
 
         /* Write the image in the visible buffer and then swap. */
-        glDrawBuffer(GL_BACK);
-        /* Place raster position in lower left corner. */
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        glRasterPos2f(-1, -1);
-        {
+        if (icetImageGetColorFormat(composite_image) ==
+            ICET_IMAGE_COLOR_RGBA_UBYTE) {
             IceTUByte *color_buffer = icetImageGetColorub(composite_image);
+            glDrawBuffer(GL_BACK);
+            /* Place raster position in lower left corner. */
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+            glRasterPos2f(-1, -1);
             glDisable(GL_TEXTURE_1D);
             glDisable(GL_TEXTURE_2D);
             glDisable(GL_TEXTURE_3D);
             glDisable(GL_BLEND);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDrawPixels(SCREEN_WIDTH,
                          SCREEN_HEIGHT,
                          GL_RGBA,
                          GL_UNSIGNED_BYTE,
                          color_buffer);
+            swap_buffers();
         }
-        swap_buffers();
     }
 
     return TEST_PASSED;
@@ -261,6 +267,5 @@ int SimpleExampleOGL3(int argc, char * argv[])
     (void)argc;
     (void)argv;
 
-    icetGL3Initialize();
     return run_test(SimpleExampleRun);
 }
