@@ -39,8 +39,7 @@ typedef void (*IceTGL3DrawCallbackTextureType)(
         const GLdouble *projection_matrix,
         const GLdouble *modelview_matrix,
         const GLint *readback_viewport,
-        GLuint color_texture,
-        GLuint depth_texture);
+        GLuint framebuffer_id);
 
 ICET_GL3_EXPORT void icetGL3DrawCallbackTexture(
         IceTGL3DrawCallbackTextureType callback);
@@ -53,6 +52,7 @@ ICET_GL3_EXPORT void icetGL3DrawCallbackTexture(
 #define ICET_GL3_DRAW_FUNCTION   (ICET_GL3_STATE_START | (IceTEnum)0x0020)
 #define ICET_GL3_COLOR_TEXTURE   (ICET_GL3_STATE_START | (IceTEnum)0x0021)
 #define ICET_GL3_DEPTH_TEXTURE   (ICET_GL3_STATE_START | (IceTEnum)0x0022)
+#define ICET_GL3_FRAMEBUFFER     (ICET_GL3_STATE_START | (IceTEnum)0x0023)
 
 #define ICET_GL3_STATE_ENABLE_START ICET_RENDER_LAYER_ENABLE_START
 #define ICET_GL3_STATE_ENABLE_END   ICET_RENDER_LAYER_ENABLE_END

@@ -82,24 +82,13 @@ static void GetSphereArrays(GLfloat **vertex_array_p, GLfloat **normal_array_p)
 static void draw(const GLdouble *projection_matrix,
                  const GLdouble *modelview_matrix,
                  const GLint *readback_viewport,
-                 GLuint color_texture,
-                 GLuint depth_texture)
+                 GLuint framebuffer_id)
 {
     GLfloat *vertex_array;
     GLfloat *normal_array;
-    GLuint framebuffer_id;
-    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
 
     (void)readback_viewport; /* Not used. */
-
-    /* Bind the provided textures to a framebuffer. */
-    glGenFramebuffers(1, &framebuffer_id);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
-    glFramebufferTexture2D(
-        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_texture, 0);
-    glFramebufferTexture2D(
-        GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_texture, 0);
-    glDrawBuffers(1, &draw_buffer);
+    (void)framebuffer_id; /* Not used. */
 
     GetSphereArrays(&vertex_array, &normal_array);
     glVertexPointer(3, GL_FLOAT, 0, vertex_array);
@@ -116,8 +105,6 @@ static void draw(const GLdouble *projection_matrix,
     glLoadMatrixd(modelview_matrix);
     glTranslatef((float)rank, 0, 0);
     glDrawArrays(GL_QUADS, 0, SPHERE_NUM_VERTICES);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 static int SimpleExampleRun()

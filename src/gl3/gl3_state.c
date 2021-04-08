@@ -35,6 +35,14 @@ void icetGL3Initialize(void)
     icetStateSetBoolean(ICET_GL3_INITIALIZED, ICET_TRUE);
 
     icetStateSetPointer(ICET_GL3_DRAW_FUNCTION, NULL);
+    icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, 0);
+    icetStateSetInteger(ICET_GL3_DEPTH_TEXTURE, 0);
+
+    {
+        GLuint framebuffer_id;
+        glGenFramebuffers(1, &framebuffer_id);
+        icetStateSetInteger(ICET_GL3_FRAMEBUFFER, framebuffer_id);
+    }
 
     icetStateSetPointer(ICET_RENDER_LAYER_DESTRUCTOR, gl3_destroy);
 }
@@ -64,4 +72,36 @@ IceTBoolean icetGL3IsInitialized(void)
 void gl3_destroy(void)
 {
     icetRaiseDebug("In OpenGL layer destructor.");
+
+    {
+        IceTInt icet_texture;
+        GLuint gl_texture;
+        icetGetIntegerv(ICET_GL3_COLOR_TEXTURE, &icet_texture);
+        gl_texture = icet_texture;
+        if (gl_texture != 0)
+        {
+            glDeleteTextures(1, &gl_texture);
+        }
+    }
+    {
+        IceTInt icet_texture;
+        GLuint gl_texture;
+        icetGetIntegerv(ICET_GL3_DEPTH_TEXTURE, &icet_texture);
+        gl_texture = icet_texture;
+        if (gl_texture != 0)
+        {
+            glDeleteTextures(1, &gl_texture);
+        }
+    }
+
+    {
+        IceTInt icet_framebuffer;
+        GLuint gl_framebuffer;
+        icetGetIntegerv(ICET_GL3_FRAMEBUFFER, &icet_framebuffer);
+        gl_framebuffer = icet_framebuffer;
+        if (gl_framebuffer != 0)
+        {
+            glDeleteTextures(1, &gl_framebuffer);
+        }
+    }
 }

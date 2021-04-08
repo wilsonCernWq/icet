@@ -16,8 +16,8 @@
 static void setupOpenGL3Render(GLfloat *background_color,
                                IceTDrawCallbackType *original_callback,
                                IceTBoolean *ok_to_proceed);
-static void setupColorTexture();
-static void setupDepthTexture();
+static GLuint setupColorTexture();
+static GLuint setupDepthTexture();
 static void finalizeOpenGL3Render(const GLfloat *background_color,
                                   IceTDrawCallbackType original_callback);
 static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
@@ -57,7 +57,7 @@ IceTImage icetGL3DrawFrame(const IceTDouble *projection_matrix,
         return icetImageNull();
     }
 
-  /* Hand control to the core layer to render and composite. */
+    /* Hand control to the core layer to render and composite. */
     image = icetDrawFrame(projection_matrix,
                           modelview_matrix,
                           background_color);
@@ -70,21 +70,21 @@ IceTImage icetGL3DrawFrame(const IceTDouble *projection_matrix,
     return image;
 }
 
-static void setupColorTexture()
+static GLuint setupColorTexture()
 {
     IceTInt width;
     IceTInt height;
-    GLuint color_texture_id;
+    GLuint color_texture_id =
+        *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE);
 
     icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &width);
     icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &height);
 
-    if (icetStateGetType(ICET_GL3_COLOR_TEXTURE) == ICET_INT)
+    if (color_texture_id != 0)
     {
         GLint actual_width;
         GLint actual_height;
 
-        color_texture_id = *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE);
         glBindTexture(GL_TEXTURE_2D, color_texture_id);
         glGetTexLevelParameteriv(
                     GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &actual_width);
@@ -94,10 +94,11 @@ static void setupColorTexture()
 
         if ((width == actual_width) && (height == actual_height)) {
             /* Texture should be fine. Just leave as is. */
-            return;
+            return color_texture_id;
         } else {
             /* Texture is wrong size. Delete it and create a new one. */
             glDeleteTextures(1, &color_texture_id);
+            icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, 0);
         }
     }
 
@@ -118,23 +119,24 @@ static void setupColorTexture()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, color_texture_id);
+    return color_texture_id;
 }
 
-static void setupDepthTexture()
+static GLuint setupDepthTexture()
 {
     IceTInt width;
     IceTInt height;
-    GLuint depth_texture_id;
+    GLuint depth_texture_id =
+        *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE);
 
     icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &width);
     icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &height);
 
-    if (icetStateGetType(ICET_GL3_DEPTH_TEXTURE) == ICET_INT)
+    if (depth_texture_id != 0)
     {
         GLint actual_width;
         GLint actual_height;
 
-        depth_texture_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE);
         glBindTexture(GL_TEXTURE_2D, depth_texture_id);
         glGetTexLevelParameteriv(
                     GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &actual_width);
@@ -144,10 +146,11 @@ static void setupDepthTexture()
 
         if ((width == actual_width) && (height == actual_height)) {
             /* Texture should be fine. Just leave as is. */
-            return;
+            return depth_texture_id;
         } else {
             /* Texture is wrong size. Delete it and create a new one. */
             glDeleteTextures(1, &depth_texture_id);
+            icetStateSetInteger(ICET_GL3_DEPTH_TEXTURE, 0);
         }
     }
 
@@ -170,6 +173,7 @@ static void setupDepthTexture()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     icetStateSetInteger(ICET_GL3_DEPTH_TEXTURE, depth_texture_id);
+    return depth_texture_id;
 }
 
 static void setupOpenGL3Render(GLfloat *background_color,
@@ -178,6 +182,10 @@ static void setupOpenGL3Render(GLfloat *background_color,
 
 {
     IceTVoid *value;
+    GLuint color_buffer_id;
+    GLuint depth_buffer_id;
+    GLuint framebuffer_id;
+    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
 
     *ok_to_proceed = ICET_FALSE;
 
@@ -188,20 +196,34 @@ static void setupOpenGL3Render(GLfloat *background_color,
         return;
     }
 
+    /* Check the GL callback. */
+    icetGetPointerv(ICET_GL3_DRAW_FUNCTION, &value);
+    if (value == NULL) {
+        icetRaiseError(
+                    ICET_INVALID_OPERATION,
+                    "GL3 Drawing function not set. Call icetGL3DrawCallback.");
+        return;
+    }
+
     /* Set the background color to OpenGL's background color. */
     glGetFloatv(GL_COLOR_CLEAR_VALUE, background_color);
 
     /* Set up the framebuffer textures. */
-    setupColorTexture();
-    setupDepthTexture();
-
-    /* Check the GL callback. */
-    icetGetPointerv(ICET_GL3_DRAW_FUNCTION, &value);
-    if (value == NULL) {
-        icetRaiseError(ICET_INVALID_OPERATION,
-                       "GL Drawing function not set. Call icetGLDrawCallback.");
-        return;
-    }
+    color_buffer_id = setupColorTexture();
+    depth_buffer_id = setupDepthTexture();
+    framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+    glFramebufferTexture2D(GL_FRAMEBUFFER,
+                           GL_COLOR_ATTACHMENT0,
+                           GL_TEXTURE_2D,
+                           color_buffer_id,
+                           0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER,
+                           GL_DEPTH_ATTACHMENT,
+                           GL_TEXTURE_2D,
+                           depth_buffer_id,
+                           0);
+    glDrawBuffers(1, &draw_buffer);
 
     /* Set up core callback to call the GL layer. */
     icetGetPointerv(ICET_DRAW_FUNCTION, &value);
@@ -220,6 +242,8 @@ static void finalizeOpenGL3Render(const GLfloat *background_color,
     /* Fix background color. */
     glClearColor(background_color[0], background_color[1],
                  background_color[2], background_color[3]);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
@@ -246,8 +270,7 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
         (*callback)(projection_matrix,
                     modelview_matrix,
                     readback_viewport,
-                    (GLuint)*icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE),
-                    (GLuint)*icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE));
+                    (GLuint)*icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER));
     }
 
     /* Temporarily stop render time while reading back buffer. */
@@ -258,47 +281,76 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
     /* Read the OpenGL buffers. */
     /* TODO: This is an inefficient way to get data back from the */
     /* graphics card. What we really want to do is compress the data */
-    /* on the card or, if that is not possible or desired, to read */
-    /* back only the readback_viewport. */
+    /* on the card. */
     {
         IceTEnum color_format = icetImageGetColorFormat(result);
         IceTEnum depth_format = icetImageGetDepthFormat(result);
+        IceTSizeType x_offset = readback_viewport[0];
+        IceTSizeType y_offset = readback_viewport[1];
+        IceTSizeType width = icetImageGetWidth(result);
+        /* IceTSizeType height = icetImageGetHeight(result); */
+
+        glPixelStorei(GL_PACK_ROW_LENGTH, (GLint)icetImageGetWidth(result));
+
+      /* These pixel store parameters are not working on one of the platforms
+       * I am testing on (thank you Mac).  Instead of using these, just offset
+       * the buffers we read in from. */
+        /* glPixelStorei(GL_PACK_SKIP_PIXELS, readback_viewport[0]); */
+        /* glPixelStorei(GL_PACK_SKIP_ROWS, readback_viewport[1]); */
 
         if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE) {
             IceTUInt *colorBuffer = icetImageGetColorui(result);
-            glBindTexture(GL_TEXTURE_2D,
-                          *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE));
-            glGetTexImage(
-                GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer);
+            glReadPixels((GLint)x_offset,
+                         (GLint)y_offset,
+                         (GLsizei)readback_viewport[2],
+                         (GLsizei)readback_viewport[3],
+                         GL_RGBA,
+                         GL_UNSIGNED_BYTE,
+                         colorBuffer + (  readback_viewport[0]
+                                        + width*readback_viewport[1]));
         } else if (color_format == ICET_IMAGE_COLOR_RGBA_FLOAT) {
             IceTFloat *colorBuffer = icetImageGetColorf(result);
-            glBindTexture(GL_TEXTURE_2D,
-                          *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE));
-            glGetTexImage(
-                GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, colorBuffer);
+            glReadPixels((GLint)x_offset,
+                         (GLint)y_offset,
+                         (GLsizei)readback_viewport[2],
+                         (GLsizei)readback_viewport[3],
+                         GL_RGBA,
+                         GL_FLOAT,
+                         colorBuffer + 4*(  readback_viewport[0]
+                                          + width*readback_viewport[1]));
         } else if (color_format == ICET_IMAGE_COLOR_RGB_FLOAT) {
             IceTFloat *colorBuffer = icetImageGetColorf(result);
-            glBindTexture(GL_TEXTURE_2D,
-                          *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE));
-            glGetTexImage(
-                GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, colorBuffer);
+            glReadPixels((GLint)x_offset,
+                         (GLint)y_offset,
+                         (GLsizei)readback_viewport[2],
+                         (GLsizei)readback_viewport[3],
+                         GL_RGB,
+                         GL_FLOAT,
+                         colorBuffer + 3*(  readback_viewport[0]
+                                          + width*readback_viewport[1]));
         } else if (color_format != ICET_IMAGE_COLOR_NONE) {
             icetRaiseError(ICET_SANITY_CHECK_FAIL,
                            "Invalid color format 0x%X.", color_format);
         }
 
         if (depth_format == ICET_IMAGE_DEPTH_FLOAT) {
-            IceTFloat *depthBuffer = icetImageGetDepthf(result);
-            glBindTexture(GL_TEXTURE_2D,
-                          *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE));
-            glGetTexImage(
-                GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depthBuffer);
+            IceTFloat *depthBuffer = icetImageGetDepthf(result);;
+            glReadPixels((GLint)x_offset,
+                         (GLint)y_offset,
+                         (GLsizei)readback_viewport[2],
+                         (GLsizei)readback_viewport[3],
+                         GL_DEPTH_COMPONENT,
+                         GL_FLOAT,
+                         depthBuffer + (  readback_viewport[0]
+                                        + width*readback_viewport[1]));
         } else if (depth_format != ICET_IMAGE_DEPTH_NONE) {
             icetRaiseError(ICET_SANITY_CHECK_FAIL,
                            "Invalid depth format 0x%X.", depth_format);
         }
 
-        glBindTexture(GL_TEXTURE_2D, 0);
+        glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+        /* glPixelStorei(GL_PACK_SKIP_PIXELS, 0); */
+        /* glPixelStorei(GL_PACK_SKIP_ROWS, 0); */
     }
 
     icetTimingBufferReadEnd();
