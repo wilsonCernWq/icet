@@ -16,8 +16,9 @@
 static void setupOpenGL3Render(GLfloat *background_color,
                                IceTDrawCallbackType *original_callback,
                                IceTBoolean *ok_to_proceed);
-static GLuint setupColorTexture();
-static GLuint setupDepthTexture();
+static GLuint setupColorTexture(IceTBoolean *dirty);
+static GLuint setupDepthTexture(IceTBoolean *dirty);
+static void setupFramebuffer();
 static void finalizeOpenGL3Render(const GLfloat *background_color,
                                   IceTDrawCallbackType original_callback);
 static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
@@ -70,7 +71,7 @@ IceTImage icetGL3DrawFrame(const IceTDouble *projection_matrix,
     return image;
 }
 
-static GLuint setupColorTexture()
+static GLuint setupColorTexture(IceTBoolean *dirty)
 {
     IceTInt width;
     IceTInt height;
@@ -93,7 +94,7 @@ static GLuint setupColorTexture()
         glBindTexture(GL_TEXTURE_2D, 0);
 
         if ((width == actual_width) && (height == actual_height)) {
-            /* Texture should be fine. Just leave as is. */
+            /* Texture should be fine. Just leave as is and return not dirty. */
             return color_texture_id;
         } else {
             /* Texture is wrong size. Delete it and create a new one. */
@@ -101,6 +102,9 @@ static GLuint setupColorTexture()
             icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, 0);
         }
     }
+
+    /* Return texture is "dirty" and framebuffer needs to be rebuilt. */
+    *dirty = ICET_TRUE;
 
     glGenTextures(1, &color_texture_id);
     glBindTexture(GL_TEXTURE_2D, color_texture_id);
@@ -122,7 +126,7 @@ static GLuint setupColorTexture()
     return color_texture_id;
 }
 
-static GLuint setupDepthTexture()
+static GLuint setupDepthTexture(IceTBoolean *dirty)
 {
     IceTInt width;
     IceTInt height;
@@ -145,7 +149,7 @@ static GLuint setupDepthTexture()
         glBindTexture(GL_TEXTURE_2D, 0);
 
         if ((width == actual_width) && (height == actual_height)) {
-            /* Texture should be fine. Just leave as is. */
+            /* Texture should be fine. Just leave as is and return not dirty. */
             return depth_texture_id;
         } else {
             /* Texture is wrong size. Delete it and create a new one. */
@@ -153,6 +157,9 @@ static GLuint setupDepthTexture()
             icetStateSetInteger(ICET_GL3_DEPTH_TEXTURE, 0);
         }
     }
+
+    /* Return texture is "dirty" and framebuffer needs to be rebuilt. */
+    *dirty = ICET_TRUE;
 
     glGenTextures(1, &depth_texture_id);
     glBindTexture(GL_TEXTURE_2D, depth_texture_id);
@@ -176,16 +183,41 @@ static GLuint setupDepthTexture()
     return depth_texture_id;
 }
 
+static void setupFramebuffer()
+{
+    GLuint color_buffer_id;
+    GLuint depth_buffer_id;
+    GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
+    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+    IceTBoolean buffer_dirty = ICET_FALSE;
+
+    color_buffer_id = setupColorTexture(&buffer_dirty);
+    depth_buffer_id = setupDepthTexture(&buffer_dirty);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+
+    if (buffer_dirty) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+                               GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_2D,
+                               color_buffer_id,
+                               0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+                               GL_DEPTH_ATTACHMENT,
+                               GL_TEXTURE_2D,
+                               depth_buffer_id,
+                               0);
+    }
+
+    glDrawBuffers(1, &draw_buffer);
+}
+
 static void setupOpenGL3Render(GLfloat *background_color,
                                IceTDrawCallbackType *original_callback,
                                IceTBoolean *ok_to_proceed)
 
 {
     IceTVoid *value;
-    GLuint color_buffer_id;
-    GLuint depth_buffer_id;
-    GLuint framebuffer_id;
-    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
 
     *ok_to_proceed = ICET_FALSE;
 
@@ -209,21 +241,7 @@ static void setupOpenGL3Render(GLfloat *background_color,
     glGetFloatv(GL_COLOR_CLEAR_VALUE, background_color);
 
     /* Set up the framebuffer textures. */
-    color_buffer_id = setupColorTexture();
-    depth_buffer_id = setupDepthTexture();
-    framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D,
-                           color_buffer_id,
-                           0);
-    glFramebufferTexture2D(GL_FRAMEBUFFER,
-                           GL_DEPTH_ATTACHMENT,
-                           GL_TEXTURE_2D,
-                           depth_buffer_id,
-                           0);
-    glDrawBuffers(1, &draw_buffer);
+    setupFramebuffer();
 
     /* Set up core callback to call the GL layer. */
     icetGetPointerv(ICET_DRAW_FUNCTION, &value);
