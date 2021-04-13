@@ -352,6 +352,8 @@ ICET_EXPORT void icetDiagnostics(IceTBitField mask);
 #define ICET_SUBFUNC_START_TIME (ICET_STATE_TIMING_START | (IceTEnum)0x0012)
 #define ICET_SUBFUNC_TIME_ID    (ICET_STATE_TIMING_START | (IceTEnum)0x0013)
 
+#define ICET_RENDER_LAYER_ID    (IceTEnum)0x000000FF
+
 /* This set of state variables are reserved for the rendering layer. */
 #define ICET_RENDER_LAYER_STATE_START (IceTEnum)0x00000100
 #define ICET_RENDER_LAYER_STATE_END   (IceTEnum)0x00000140

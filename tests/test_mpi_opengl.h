@@ -10,12 +10,13 @@
 #ifndef _TEST_MPI_OPENGL_H
 #define _TEST_MPI_OPENGL_H
 
+// Turn of OpenGL deprecation warnigs on apple
+#define GL_SILENCE_DEPRECATION
+
 #define ICET_NO_MPI_RENDERING_FUNCTIONS
 #include "test_mpi.h"
 
 #include "test_config.h"
-
-#include <IceTGL.h>
 
 #ifdef ICET_TESTS_USE_GLUT
 #ifndef __APPLE__
@@ -44,7 +45,7 @@ static void checkOglError(void)
     GLenum error = glGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printrank("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current OpenGL error = " #ename "\n"); break;
 
     switch (error) {
       case GL_NO_ERROR: break;
@@ -138,8 +139,6 @@ void initialize_render_window(int width, int height)
         sprintf(title, "IceT Test %d of %d", rank, num_proc);
         windowId = glutCreateWindow(title);
     }
-
-    icetGLInitialize();
 }
 
 void swap_buffers(void)
@@ -188,8 +187,6 @@ void initialize_render_window(int width, int height)
     }
 
     glfwMakeContextCurrent(window);
-
-    icetGLInitialize();
 }
 
 void swap_buffers(void)

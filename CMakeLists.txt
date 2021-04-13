@@ -41,6 +41,7 @@ SET(ICET_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 # Options controlling support libraries
 OPTION(ICET_USE_OPENGL "Build OpenGL support layer for IceT." ON)
+OPTION(ICET_USE_OPENGL3 "Build OpenGL version 3 support layer for IceT." ON)
 OPTION(ICET_USE_OSMESA "Use OffScreen Mesa" OFF)
 OPTION(ICET_USE_OFFSCREEN_EGL "Use OffScreen rendering through EGL" OFF)
 OPTION(ICET_USE_MPI "Build MPI communication layer for IceT." ON)
