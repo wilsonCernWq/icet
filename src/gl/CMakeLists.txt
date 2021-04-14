@@ -13,6 +13,7 @@ SET(ICET_GL_SRCS
 
 SET(ICET_GL_HEADERS
   ../include/IceTGL.h
+  ../include/IceTDevGLImage.h
   )
 
 ICET_ADD_LIBRARY(IceTGL ${ICET_GL_SRCS} ${ICET_GL_HEADERS})

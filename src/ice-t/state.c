@@ -190,6 +190,7 @@ void icetStateSetDefaults(void)
 
     icetStateSetPointer(ICET_DRAW_FUNCTION, NULL);
     icetStateSetPointer(ICET_RENDER_LAYER_DESTRUCTOR, NULL);
+    icetStateSetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER, ICET_FALSE);
 
     icetEnable(ICET_FLOATING_VIEWPORT);
     icetDisable(ICET_ORDERED_COMPOSITE);
@@ -199,7 +200,7 @@ void icetStateSetDefaults(void)
     icetEnable(ICET_COLLECT_IMAGES);
     icetDisable(ICET_RENDER_EMPTY_IMAGES);
 
-    icetStateSetBoolean(ICET_IS_DRAWING_FRAME, 0);
+    icetStateSetBoolean(ICET_IS_DRAWING_FRAME, ICET_FALSE);
 
     icetStateSetInteger(ICET_VALID_PIXELS_TILE, -1);
     icetStateSetInteger(ICET_VALID_PIXELS_OFFSET, 0);
