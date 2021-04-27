@@ -9,6 +9,8 @@
 
 #include <IceTGL3.h>
 
+#include <IceTDevGL3Image.h>
+
 #include <IceTDevDiagnostics.h>
 #include <IceTDevState.h>
 
@@ -20,6 +22,10 @@ static const char gl_identifier[] = "OGL3";
 
 void icetGL3Initialize(void)
 {
+    IceTGetRenderedBufferImage getImageCallback = icetGL3GetRenderedBufferImage;
+    IceTGetCompressedRenderedBufferImage getCompressedImageCallback =
+        icetGL3GetCompressedRenderedBufferImage;
+
     if (icetGL3IsInitialized()) {
         icetRaiseWarning(ICET_INVALID_OPERATION,
                          "icetGLInitialize called multiple times.");
@@ -33,6 +39,11 @@ void icetGL3Initialize(void)
 
     icetStateSetPointer(ICET_RENDER_LAYER_ID, gl_identifier);
     icetStateSetBoolean(ICET_GL3_INITIALIZED, ICET_TRUE);
+
+    icetStateSetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER, ICET_TRUE);
+    icetStateSetPointer(ICET_GET_RENDERED_BUFFER_IMAGE, getImageCallback);
+    icetStateSetPointer(ICET_GET_COMPRESSED_RENDERED_BUFFER_IMAGE,
+                        getCompressedImageCallback);
 
     icetStateSetPointer(ICET_GL3_DRAW_FUNCTION, NULL);
     icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, 0);

@@ -88,7 +88,7 @@ IceTImage icetSequentialCompose(void)
                                                        tile_width, tile_height);
 
         icetGetCompressedTileImage(i, rendered_image);
-	icetSingleImageCompose(compose_group,
+        icetSingleImageCompose(compose_group,
                                num_proc,
                                image_dest,
                                rendered_image,
