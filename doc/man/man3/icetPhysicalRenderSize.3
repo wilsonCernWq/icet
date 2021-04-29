@@ -52,6 +52,12 @@ When using the \fbOpenGL \fPrendering layer, the physical rendering size is
 overridden to the size of the \fbOpenGL \fPviewport in each call to
 \fBicetGLDrawFrame\fP\&.
 .PP
+When using the \fbOpenGL 3 \fPrendering layer, buffers are created
+internally to be the the best size supported by the system (where the best
+size usually depends on the layout of the tiles). Thus, the physical
+rendering size is overridden in the \fbOpenGL 3 \fPrendering layer to the
+size of the rendering buffers created.
+.PP
 .SH Errors
 
 .PP
