@@ -13,6 +13,13 @@
 #include <IceTDevState.h>
 #include <IceTDevTiming.h>
 
+#ifndef MIN
+#define MIN(x, y)       ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y)       ((x) < (y) ? (y) : (x))
+#endif
+
 static void setupOpenGL3Render(GLfloat *background_color,
                                IceTDrawCallbackType *original_callback,
                                IceTBoolean *ok_to_proceed);
@@ -189,11 +196,24 @@ static void setupFramebuffer()
     GLuint depth_buffer_id;
     GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
     GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+    IceTInt global_viewport[4];
+    IceTSizeType physical_width;
+    IceTSizeType physical_height;
+    GLint max_size;
     IceTBoolean buffer_dirty = ICET_FALSE;
 
+    /* Determine what size buffer to use. */
+    icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
+    physical_width = MIN(global_viewport[2], max_size);
+    physical_height = MIN(global_viewport[3], max_size);
+    icetPhysicalRenderSize(physical_width, physical_height);
+
+    /* Create any necessary OpenGL objects for buffer. */
     color_buffer_id = setupColorTexture(&buffer_dirty);
     depth_buffer_id = setupDepthTexture(&buffer_dirty);
 
+    /* Enable framebuffer and update textures if necessary. */
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
 
     if (buffer_dirty) {
@@ -210,6 +230,7 @@ static void setupFramebuffer()
     }
 
     glDrawBuffers(1, &draw_buffer);
+    glViewport(0, 0, physical_width, physical_height);
 }
 
 static void setupOpenGL3Render(GLfloat *background_color,
