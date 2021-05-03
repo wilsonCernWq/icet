@@ -9,6 +9,8 @@ SET(ICET_GL3_SRCS
   gl3_draw.c
   gl3_image.c
   gl3_state.c
+
+  glad.c
   )
 
 SET(ICET_GL3_HEADERS

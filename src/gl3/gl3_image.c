@@ -7,6 +7,8 @@
  * This source code is released under the New BSD License.
  */
 
+#include <glad/glad.h>
+
 #include <IceTDevGL3Image.h>
 
 #include <IceTDevDiagnostics.h>

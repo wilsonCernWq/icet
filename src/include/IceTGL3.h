@@ -12,12 +12,24 @@
 
 #include <IceT.h>
 
-#ifdef __APPLE__
-#  define GL_SILENCE_DEPRECATION
-#  include <OpenGL/gl.h>
-#else
-#  include <GL/gl.h>
+#ifdef __gl_h
+// Check that sizes of GL types are compatible with IceT types.
+#if sizeof(GLfloat) != sizeof(IceTFloat)
+#error "Unexpected size of GLfloat."
 #endif
+#if sizeof(GLdouble) != sizeof(IceTDouble)
+#error "Unexpected size of GLdouble."
+#endif
+#if sizeof(GLenum) != sizeof(IceTEnum)
+#error "Unexpected size of GLenum."
+#endif
+#if sizeof(GLint) != sizeof(IceTInt)
+#error "Unexpected size of GLint."
+#endif
+#if sizeof(GLuint) != sizeof(IceTUInt)
+#error "Unexpected size of GLuint."
+#endif
+#endif //__gl_h
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,16 +42,14 @@ ICET_GL3_EXPORT void icetGL3Initialize(void);
 
 ICET_GL3_EXPORT IceTBoolean icetGL3IsInitialized(void);
 
-ICET_GL3_EXPORT void icetGL3SetReadBuffer(GLenum mode);
-
 ICET_GL3_EXPORT IceTImage icetGL3DrawFrame(const IceTDouble *projection_matrix,
                                            const IceTDouble *modelview_matrix);
 
 typedef void (*IceTGL3DrawCallbackTextureType)(
-        const GLdouble *projection_matrix,
-        const GLdouble *modelview_matrix,
-        const GLint *readback_viewport,
-        GLuint framebuffer_id);
+        const IceTDouble *projection_matrix,
+        const IceTDouble *modelview_matrix,
+        const IceTInt *readback_viewport,
+        IceTUInt framebuffer_id);
 
 ICET_GL3_EXPORT void icetGL3DrawCallbackTexture(
         IceTGL3DrawCallbackTextureType callback);
