@@ -240,7 +240,9 @@ static int SimpleExampleRun()
             glRasterPos2f(-1, -1);
             glDisable(GL_TEXTURE_1D);
             glDisable(GL_TEXTURE_2D);
+#ifdef GL_TEXTURE_3D
             glDisable(GL_TEXTURE_3D);
+#endif
             glDisable(GL_BLEND);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDrawPixels(SCREEN_WIDTH,
