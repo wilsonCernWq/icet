@@ -7,6 +7,8 @@
  * This source code is released under the New BSD License.
  */
 
+#include <glad/glad.h>
+
 #include <IceTGL3.h>
 
 #include <IceTDevGL3Image.h>
@@ -36,6 +38,8 @@ void icetGL3Initialize(void)
                            "layers.");
         }
     }
+
+    gladLoadGL();
 
     icetStateSetPointer(ICET_RENDER_LAYER_ID, gl_identifier);
     icetStateSetBoolean(ICET_GL3_INITIALIZED, ICET_TRUE);
