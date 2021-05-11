@@ -75,16 +75,6 @@ static void readPixels(IceTImage target_image,
 
     if (depth_format == ICET_IMAGE_DEPTH_FLOAT) {
         IceTFloat *depthBuffer = icetImageGetDepthf(target_image);;
-        /*
-        glReadPixels((GLint)x_offset,
-                     (GLint)y_offset,
-                     (GLsizei)target_viewport[2],
-                     (GLsizei)target_viewport[3],
-                     GL_DEPTH_COMPONENT,
-                     GL_FLOAT,
-                     depthBuffer + (  target_viewport[0]
-                                    + width*target_viewport[1]));
-        */
         glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer_id);
         glReadPixels((GLint)x_offset,
                      (GLint)y_offset,
