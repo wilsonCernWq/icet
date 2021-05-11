@@ -15,6 +15,8 @@
 #include <IceTDevState.h>
 #include <IceTDevTiming.h>
 
+#include <stdio.h>
+
 #ifndef MIN
 #define MIN(x, y)       ((x) < (y) ? (x) : (y))
 #endif
@@ -434,7 +436,6 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
     glBindVertexArray(0);
     
     glUseProgram(0);
-    
     
     /*
     glBindFramebuffer(GL_FRAMEBUFFER, 0); ???

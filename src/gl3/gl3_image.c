@@ -14,8 +14,6 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevTiming.h>
 
-#include <stdio.h>
-
 static void readPixels(IceTImage target_image,
                        IceTInt *rendered_viewport,
                        IceTInt *target_viewport)
@@ -25,7 +23,7 @@ static void readPixels(IceTImage target_image,
     IceTSizeType x_offset = rendered_viewport[0];
     IceTSizeType y_offset = rendered_viewport[1];
     IceTSizeType width = icetImageGetWidth(target_image);
-    /*IceTSizeType height = icetImageGetHeight(target_image);*/
+    /* IceTSizeType height = icetImageGetHeight(target_image); */
     GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
     GLuint depth_framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_FRAMEBUFFER);
 
@@ -76,7 +74,17 @@ static void readPixels(IceTImage target_image,
     }
 
     if (depth_format == ICET_IMAGE_DEPTH_FLOAT) {
-        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);
+        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);;
+        /*
+        glReadPixels((GLint)x_offset,
+                     (GLint)y_offset,
+                     (GLsizei)target_viewport[2],
+                     (GLsizei)target_viewport[3],
+                     GL_DEPTH_COMPONENT,
+                     GL_FLOAT,
+                     depthBuffer + (  target_viewport[0]
+                                    + width*target_viewport[1]));
+        */
         glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer_id);
         glReadPixels((GLint)x_offset,
                      (GLint)y_offset,

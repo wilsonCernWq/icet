@@ -65,7 +65,7 @@ void icetGL3Initialize(void)
         icetStateSetInteger(ICET_GL3_FRAMEBUFFER, framebuffer_id[0]);
         icetStateSetInteger(ICET_GL3_DEPTH_FRAMEBUFFER, framebuffer_id[1]);
     }
-    
+
     {
         GLuint program;
         GLint image_uniform;
@@ -73,7 +73,7 @@ void icetGL3Initialize(void)
         icetStateSetInteger(ICET_GL3_RENDERIMAGE_PROGRAM, program);
         icetStateSetInteger(ICET_GL3_RENDERIMAGE_IMAGE_UNIFORM, image_uniform);
     }
-    
+
     {
         GLuint plane_vertex_array;
         icetGL3CreatePlaneVertexArray(&plane_vertex_array);
@@ -161,7 +161,16 @@ void gl3_destroy(void)
         }
     }
     
-    /* Destroy program and vertex array ??? */
+    {
+        IceTInt icet_vertex_array;
+        GLuint gl_vertex_array;
+        icetGetIntegerv(ICET_GL3_PLANE_VERTEXARRAY, &icet_vertex_array);
+        gl_vertex_array = icet_vertex_array;
+        if (gl_vertex_array != 0)
+        {
+            glDeleteVertexArrays(1, &gl_vertex_array);
+        }
+    }
 }
 
 void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
@@ -285,8 +294,8 @@ void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
     /* Create vertex array object */
     glGenVertexArrays(1, plane_vertex_array);
     glBindVertexArray(*plane_vertex_array);
-
-    // Vertex positions
+    
+    /* Vertex positions */
     glGenBuffers(1, &vertex_position_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_position_buffer);
     {
@@ -327,4 +336,7 @@ void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
     }
     
     glBindVertexArray(0);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
