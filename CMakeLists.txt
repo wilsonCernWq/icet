@@ -45,6 +45,7 @@ OPTION(ICET_USE_OPENGL3 "Build OpenGL version 3 support layer for IceT." ON)
 OPTION(ICET_USE_OSMESA "Use OffScreen Mesa" OFF)
 OPTION(ICET_USE_OFFSCREEN_EGL "Use OffScreen rendering through EGL" OFF)
 OPTION(ICET_USE_MPI "Build MPI communication layer for IceT." ON)
+OPTION(ICET_USE_PARICOMPRESS "Use CUDA-based parallel image compression when using OpenGL version 3+ for IceT." OFF)
 
 # Option to set the preferred K value to use in the radix-k algorithm
 SET(initial_magic_k 8)

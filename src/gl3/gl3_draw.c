@@ -15,6 +15,10 @@
 #include <IceTDevState.h>
 #include <IceTDevTiming.h>
 
+#ifdef ICET_USE_PARICOMPRESS
+#include <paricompress.h>
+#endif
+
 #include <stdio.h>
 
 #ifndef MIN
@@ -134,6 +138,19 @@ static GLuint setupColorTexture(IceTBoolean *dirty)
                  GL_UNSIGNED_BYTE,
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
+    
+#ifdef ICET_USE_PARICOMPRESS
+    /* TODO: destroy old pari* items if not NULL. */
+    {
+        PariCGResource resource_color;   
+        PariCGResourceDescription description_color;
+            
+        resource_color = pariRegisterImage(color_texture_id, &description_color);
+        
+        icetStateSetPointer(ICET_GL3_COLOR_RESOURCE, resource_color);
+        icetStateSetPointer(ICET_GL3_COLOR_DESCRIPTION, description_color);
+    }
+#endif
 
     icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, color_texture_id);
     return color_texture_id;
@@ -246,6 +263,23 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
                  GL_FLOAT,
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
+    
+#ifdef ICET_USE_PARICOMPRESS
+    /* TODO: destroy old pari* items if not NULL. */
+    {
+        PariCGResource resource_depth;   
+        PariCGResourceDescription description_depth;
+        PariGpuBuffer compressed_gpu_buffer;
+            
+        resource_depth = pariRegisterImage(depth_r32f_texture_id, &description_depth);
+        // TODO: get correct image size - not always as big as full texture
+        compressed_gpu_buffer = pariAllocateGpuBuffer(width, height, PariCompressionType_ActivePixel);
+        
+        icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, resource_depth);
+        icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, description_depth);
+        icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, compressed_gpu_buffer);
+    }
+#endif
 
     icetStateSetInteger(ICET_GL3_DEPTH_R32F_TEXTURE, depth_r32f_texture_id);
     return depth_r32f_texture_id;

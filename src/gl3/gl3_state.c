@@ -79,6 +79,12 @@ void icetGL3Initialize(void)
         icetGL3CreatePlaneVertexArray(&plane_vertex_array);
         icetStateSetInteger(ICET_GL3_PLANE_VERTEXARRAY, plane_vertex_array);
     }
+    
+    icetStateSetPointer(ICET_GL3_COLOR_RESOURCE, NULL);
+    icetStateSetPointer(ICET_GL3_COLOR_DESCRIPTION, NULL);
+    icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, NULL);
+    icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, NULL);
+    icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, NULL);
 
     icetStateSetPointer(ICET_RENDER_LAYER_DESTRUCTOR, gl3_destroy);
 }
