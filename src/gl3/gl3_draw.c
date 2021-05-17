@@ -140,10 +140,17 @@ static GLuint setupColorTexture(IceTBoolean *dirty)
     glBindTexture(GL_TEXTURE_2D, 0);
     
 #ifdef ICET_USE_PARICOMPRESS
-    /* TODO: destroy old pari* items if not NULL. */
     {
         PariCGResource resource_color;   
         PariCGResourceDescription description_color;
+        
+        resource_color = *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_RESOURCE);
+        description_color = *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_DESCRIPTION);
+        
+        if (resource_color != NULL)
+        {
+            pariUnregisterImage(resource_color, description_color);
+        }
             
         resource_color = pariRegisterImage(color_texture_id, &description_color);
         
@@ -265,15 +272,30 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
     glBindTexture(GL_TEXTURE_2D, 0);
     
 #ifdef ICET_USE_PARICOMPRESS
-    /* TODO: destroy old pari* items if not NULL. */
     {
+        IceTInt max_width, max_height;
         PariCGResource resource_depth;   
         PariCGResourceDescription description_depth;
         PariGpuBuffer compressed_gpu_buffer;
-            
+        
+        resource_depth = *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_RESOURCE);
+        description_depth = *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
+        compressed_gpu_buffer = *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
+        
+        if (resource_depth != NULL)
+        {
+            pariUnregisterImage(resource_depth, description_depth);
+        }
+        if (compressed_gpu_buffer != NULL)
+        {
+            pariFreeGpuBuffer(compressed_gpu_buffer, PARI_IMAGE_ACTIVE_PIXEL);
+        }
+        
+        icetGetIntegerv(ICET_TILE_MAX_WIDTH, &max_width);
+        icetGetIntegerv(ICET_TILE_MAX_HEIGHT, &max_height);
+
         resource_depth = pariRegisterImage(depth_r32f_texture_id, &description_depth);
-        // TODO: get correct image size - not always as big as full texture
-        compressed_gpu_buffer = pariAllocateGpuBuffer(width, height, PariCompressionType_ActivePixel);
+        compressed_gpu_buffer = pariAllocateGpuBuffer(max_width, max_height, PARI_IMAGE_ACTIVE_PIXEL);
         
         icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, resource_depth);
         icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, description_depth);

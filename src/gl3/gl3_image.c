@@ -117,24 +117,18 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
                                              IceTInt *rendered_viewport,
                                              IceTInt *target_viewport)
 {
-    /* TODO: This is inefficient. It would be better to compress the image
-     * on the graphics card and transfer the sparse pixels back. */
-
+    /* Note: efficient compression on GPU only implemented for RGBA (UInt8) + Depth (Float). */
 #ifdef ICET_USE_PARICOMPRESS
     IceTEnum color_format = icetSparseImageGetColorFormat(target_image);
     IceTEnum depth_format = icetSparseImageGetDepthFormat(target_image);
 
     if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
     {
-        //IceTSizeType width, height;
-        //IceTImage image_buffer;
-        //IceTUInt icet_compressed_size;
         IceTSizeType image_width, image_height;
         IceTSizeType texture_width, texture_height;
-        GLuint color_texture_id =
-            *icetUnsafeStateGetInteger(ICET_GL3_COLOR_TEXTURE);
-        //GLuint depth_r32f_texture_id = 
-        //    *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_R32F_TEXTURE);
+        IceTUInt compressed_size;
+        void *compressed_image;
+
         PariCGResource resource_color = 
             *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_RESOURCE);
         PariCGResourceDescription description_color = 
@@ -145,53 +139,23 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
             *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
         PariGpuBuffer compressed_gpu_buffer = 
             *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
-               
-        IceTUInt compressed_size;
-        void *compressed_image;
         
-        glBindTexture(GL_TEXTURE_2D, color_texture_id);
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &texture_width);
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &texture_height);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &texture_width);
+        icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &texture_height);
         image_width = icetSparseImageGetWidth(target_image);
         image_height = icetSparseImageGetHeight(target_image);
         
-        // ICET_IMAGE_DATA_START_INDEX --> 7
+        /*
+        ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX  -->  6
+        ICET_IMAGE_DATA_START_INDEX          -->  7
+        */
         compressed_image = ((IceTUInt*)target_image.opaque_internals + 7);
-        //compressed_image = malloc(image_width * image_height * 8 + 8);
-        
-        //pariGetRgbaDepthTextureAsActivePixel(resource_color, description_color, color_texture_id,
-        //    resource_depth, description_depth, depth_r32f_texture_id, compressed_gpu_buffer,
-        //    width, height, compressed_image, &compressed_size);
+
         pariGetSubRgbaDepthTextureAsActivePixel(resource_color, description_color, resource_depth,
             description_depth, compressed_gpu_buffer, texture_width, texture_height, rendered_viewport,
             image_width, image_height, target_viewport, compressed_image, &compressed_size);
             
-        // ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX --> 6
         *((IceTUInt*)target_image.opaque_internals + 6) = 7 * sizeof(IceTUInt) + compressed_size;
-        //compressed_size = 7 * sizeof(IceTUInt) + compressed_size;
-        
-        
-        /*
-        width = icetSparseImageGetWidth(target_image);
-        height = icetSparseImageGetHeight(target_image);
-        
-        image_buffer =  icetGetStateBufferImage(ICET_RENDER_BUFFER, width, height);
-        readPixels(image_buffer, rendered_viewport, target_viewport);
-
-        icetCompressImageRegion(image_buffer,
-                                target_viewport,
-                                target_viewport,
-                                width,
-                                height,
-                                target_image);
-        
-        icet_compressed_size = *((IceTUInt*)target_image.opaque_internals + 6);
-        printf("pari size: %u, icet size: %u\n", compressed_size, icet_compressed_size);
-                                
-        free(compressed_image);
-        */
-        
     }
     else
     {
