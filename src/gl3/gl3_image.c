@@ -29,7 +29,6 @@ static void readPixels(IceTImage target_image,
     IceTSizeType width = icetImageGetWidth(target_image);
     /* IceTSizeType height = icetImageGetHeight(target_image); */
     GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
-    GLuint depth_framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_FRAMEBUFFER);
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
 
@@ -78,13 +77,12 @@ static void readPixels(IceTImage target_image,
     }
 
     if (depth_format == ICET_IMAGE_DEPTH_FLOAT) {
-        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);;
-        glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer_id);
+        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);
         glReadPixels((GLint)x_offset,
                      (GLint)y_offset,
                      (GLsizei)target_viewport[2],
                      (GLsizei)target_viewport[3],
-                     GL_RED,
+                     GL_DEPTH_COMPONENT,
                      GL_FLOAT,
                      depthBuffer + (  target_viewport[0]
                                     + width*target_viewport[1]));
@@ -162,7 +160,7 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
 #endif
         IceTSizeType width, height;
         IceTImage image_buffer;
-
+        
         width = icetSparseImageGetWidth(target_image);
         height = icetSparseImageGetHeight(target_image);
 

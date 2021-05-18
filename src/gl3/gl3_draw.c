@@ -143,10 +143,10 @@ static GLuint setupColorTexture(IceTBoolean *dirty)
     {
         PariCGResource resource_color;   
         PariCGResourceDescription description_color;
-        
+
         resource_color = *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_RESOURCE);
         description_color = *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_DESCRIPTION);
-        
+
         if (resource_color != NULL)
         {
             pariUnregisterImage(resource_color, description_color);
@@ -207,12 +207,12 @@ static GLuint setupDepthTexture(IceTBoolean *dirty)
     /* Do the format and type parameters matter if the data type is NULL? */
     glTexImage2D(GL_TEXTURE_2D,
                  0,
-                 GL_DEPTH_COMPONENT,
+                 GL_DEPTH24_STENCIL8,
                  width,
                  height,
                  0,
-                 GL_DEPTH_COMPONENT,
-                 GL_FLOAT,
+                 GL_DEPTH_STENCIL,
+                 GL_UNSIGNED_INT_24_8,
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -277,11 +277,11 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
         PariCGResource resource_depth;   
         PariCGResourceDescription description_depth;
         PariGpuBuffer compressed_gpu_buffer;
-        
+
         resource_depth = *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_RESOURCE);
         description_depth = *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
         compressed_gpu_buffer = *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
-        
+
         if (resource_depth != NULL)
         {
             pariUnregisterImage(resource_depth, description_depth);
@@ -290,7 +290,7 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
         {
             pariFreeGpuBuffer(compressed_gpu_buffer, PARI_IMAGE_ACTIVE_PIXEL);
         }
-        
+
         icetGetIntegerv(ICET_TILE_MAX_WIDTH, &max_width);
         icetGetIntegerv(ICET_TILE_MAX_HEIGHT, &max_height);
 
@@ -340,13 +340,13 @@ static void setupFramebuffer()
                                color_buffer_id,
                                0);
         glFramebufferTexture2D(GL_FRAMEBUFFER,
-                               GL_DEPTH_ATTACHMENT,
+                               GL_DEPTH_STENCIL_ATTACHMENT,
                                GL_TEXTURE_2D,
                                depth_buffer_id,
                                0);
+        glDrawBuffers(1, &draw_buffer);
     }
 
-    glDrawBuffers(1, &draw_buffer);
     glViewport(0, 0, physical_width, physical_height);
 }
 
@@ -380,9 +380,9 @@ static void setupDepthFramebuffer()
                                GL_TEXTURE_2D,
                                depth_r32f_buffer_id,
                                0);
+        glDrawBuffers(1, &draw_buffer);
     }
 
-    glDrawBuffers(1, &draw_buffer);
     glViewport(0, 0, physical_width, physical_height);
 }
 
@@ -416,7 +416,9 @@ static void setupOpenGL3Render(GLfloat *background_color,
 
     /* Set up the framebuffer textures. */
     setupFramebuffer();
+#ifdef ICET_USE_PARICOMPRESS
     setupDepthFramebuffer();
+#endif
 
     /* Set up core callback to call the GL layer. */
     icetGetPointerv(ICET_DRAW_FUNCTION, &value);
@@ -447,11 +449,13 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
 
 {
     GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
+#ifdef ICET_USE_PARICOMPRESS
     GLuint depth_framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_FRAMEBUFFER);
     GLuint program = *icetUnsafeStateGetInteger(ICET_GL3_RENDERIMAGE_PROGRAM);
     GLuint depth_texture_id = *icetUnsafeStateGetInteger(ICET_GL3_DEPTH_TEXTURE);
     GLuint plane_vertex_array = *icetUnsafeStateGetInteger(ICET_GL3_PLANE_VERTEXARRAY);
     GLint image_uniform = *icetUnsafeStateGetInteger(ICET_GL3_RENDERIMAGE_IMAGE_UNIFORM);
+#endif
 
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
 
@@ -477,6 +481,7 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
                     (GLuint)*icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER));
     }
     
+#ifdef ICET_USE_PARICOMPRESS
     /* Render depth-component texture to r32f color-based texture. */
     glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer_id);
     
@@ -492,7 +497,8 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
     glBindVertexArray(0);
     
     glUseProgram(0);
-    
+#endif
+
     /*
     glBindFramebuffer(GL_FRAMEBUFFER, 0); ???
     */
