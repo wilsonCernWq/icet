@@ -151,13 +151,13 @@ typedef void (*IceTGetRenderedBufferImage)(IceTImage target_image,
                                            IceTInt *rendered_viewport,
                                            IceTInt *target_viewport);
 
-ICET_EXPORT void icetGetCompressedTileImage(IceTInt tile,
-                                            IceTSparseImage compressed_image);
+ICET_EXPORT IceTSparseImage icetGetCompressedTileImage(IceTInt tile);
 
-typedef void (*IceTGetCompressedRenderedBufferImage)(
-        IceTSparseImage target_image,
-        IceTInt *rendered_viewport,
-        IceTInt *target_viewport);
+typedef IceTSparseImage (*IceTGetCompressedRenderedBufferImage)(
+    IceTInt *rendered_viewport,
+    IceTInt *target_viewport,
+    IceTSizeType tile_width,
+    IceTSizeType tile_height);
 
 ICET_EXPORT void icetCompressImage(const IceTImage image,
                                    IceTSparseImage compressed_image);

@@ -111,20 +111,44 @@ void icetGL3GetRenderedBufferImage(IceTImage target_image,
     icetTimingBufferReadEnd();
 }
 
-void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
-                                             IceTInt *rendered_viewport,
-                                             IceTInt *target_viewport)
+IceTSparseImage icetGL3GetCompressedRenderedBufferImage(
+        IceTInt *rendered_viewport,
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height)
 {
     /* Note: efficient compression on GPU only implemented for RGBA (UInt8) + Depth (Float). */
-#ifdef ICET_USE_PARICOMPRESS
-    IceTEnum color_format, depth_format;
-    color_format = icetSparseImageGetColorFormat(target_image);
-    depth_format = icetSparseImageGetDepthFormat(target_image);
 
-    if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
+    IceTSparseImage target_image;
+
+    /* If you need a special memory allocation for the sparse data (such as
+     * pinned memory), here is the place to allocate it. You also need to
+     * change the free method in gl3_destroy() in gl3_state.c to a matching
+     * deallocator. */
+    {
+        IceTVoid *sparse_buffer;
+        IceTSizeType num_pixels = tile_width * tile_height;
+        IceTSizeType allocated_pixels;
+        icetGetPointerv(ICET_GL3_SPARSE_OUTPUT, &sparse_buffer);
+        icetGetIntegerv(ICET_GL3_SPARSE_OUTPUT_SIZE, &allocated_pixels);
+        if (num_pixels > allocated_pixels) {
+            if (sparse_buffer != NULL) {
+                free(sparse_buffer);
+            }
+            sparse_buffer =
+                malloc(icetSparseImageBufferSize(tile_width, tile_height));
+            icetStateSetPointer(ICET_GL3_SPARSE_OUTPUT, sparse_buffer);
+            icetStateSetInteger(ICET_GL3_SPARSE_OUTPUT_SIZE, num_pixels);
+        }
+        target_image =
+            icetSparseImageAssignBuffer(sparse_buffer, tile_width, tile_height);
+    }
+
+#ifdef ICET_USE_PARICOMPRESS
+    if ((icetSparseImageGetColorFormat(target_image) == ICET_IMAGE_COLOR_RGBA_UBYTE) &&
+        (icetSparseImageGetDepthFormat(target_image) == ICET_IMAGE_DEPTH_FLOAT))
     {
         IceTDouble old_time;
-        IceTSizeType image_width, image_height;
         IceTUInt compressed_size;
         void *compressed_image;
 
@@ -139,17 +163,16 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
         PariGpuBuffer compressed_gpu_buffer =
             *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
 
-        image_width = icetSparseImageGetWidth(target_image);
-        image_height = icetSparseImageGetHeight(target_image);
-
         /*
+        TODO: Expose Image macros from image.c so that if these values change
+        they get updated everywhere.
         ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX  -->  6
         ICET_IMAGE_DATA_START_INDEX          -->  7
         */
         compressed_image = ((IceTUInt*)target_image.opaque_internals + 7);
 
         pariGetSubRgbaDepthTextureAsActivePixel(resource_color, description_color, resource_depth,
-            description_depth, compressed_gpu_buffer, image_width, image_height, target_viewport,
+            description_depth, compressed_gpu_buffer, tile_width, tile_height, target_viewport,
             rendered_viewport,compressed_image, &compressed_size);
 
         *((IceTUInt*)target_image.opaque_internals + 6) = 7 * sizeof(IceTUInt) + compressed_size;
@@ -163,15 +186,12 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
     else
     {
 #endif
-        IceTSizeType width, height;
         IceTImage image_buffer;
-
-        width = icetSparseImageGetWidth(target_image);
-        height = icetSparseImageGetHeight(target_image);
 
         icetTimingBufferReadBegin();
 
-        image_buffer =  icetGetStateBufferImage(ICET_RENDER_BUFFER, width, height);
+        image_buffer = icetGetStateBufferImage(
+                    ICET_RENDER_BUFFER, tile_width, tile_height);
         readPixels(image_buffer, rendered_viewport, target_viewport);
 
         icetTimingBufferReadEnd();
@@ -179,10 +199,12 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
         icetCompressImageRegion(image_buffer,
                                 target_viewport,
                                 target_viewport,
-                                width,
-                                height,
+                                tile_width,
+                                tile_height,
                                 target_image);
 #ifdef ICET_USE_PARICOMPRESS
     }
 #endif
+
+    return target_image;
 }
