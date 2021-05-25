@@ -125,12 +125,17 @@ int run_test(int (*test_function)())
 void initialize_render_window(int width, int height)
 {
     IceTInt rank, num_proc;
+    unsigned int display_mode;
 
     icetGetIntegerv(ICET_RANK, &rank);
     icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
 
     /* Create a renderable window. */
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA);
+    display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA;
+#ifdef GLUT_3_2_CORE_PROFILE
+    display_mode |= GLUT_3_2_CORE_PROFILE;
+#endif
+    glutInitDisplayMode(display_mode);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(width, height);
 
@@ -173,6 +178,12 @@ void initialize_render_window(int width, int height)
     icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
 
     /* Create a renderable window. */
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
     glfwWindowHint(GLFW_RED_BITS, 8);
     glfwWindowHint(GLFW_GREEN_BITS, 8);
     glfwWindowHint(GLFW_BLUE_BITS, 8);

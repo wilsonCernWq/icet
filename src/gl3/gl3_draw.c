@@ -499,9 +499,8 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
     glUseProgram(0);
 #endif
 
-    /*
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); ???
-    */
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); //???
+
 }
 
 static void correctOpenGL3RenderTimes(IceTDouble total_time)

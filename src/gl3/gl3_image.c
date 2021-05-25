@@ -119,11 +119,10 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
 #ifdef ICET_USE_PARICOMPRESS
     IceTEnum color_format = icetSparseImageGetColorFormat(target_image);
     IceTEnum depth_format = icetSparseImageGetDepthFormat(target_image);
-
+    
     if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
     {
         IceTSizeType image_width, image_height;
-        IceTSizeType texture_width, texture_height;
         IceTUInt compressed_size;
         void *compressed_image;
 
@@ -138,8 +137,6 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
         PariGpuBuffer compressed_gpu_buffer = 
             *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
         
-        icetGetIntegerv(ICET_PHYSICAL_RENDER_WIDTH, &texture_width);
-        icetGetIntegerv(ICET_PHYSICAL_RENDER_HEIGHT, &texture_height);
         image_width = icetSparseImageGetWidth(target_image);
         image_height = icetSparseImageGetHeight(target_image);
         
@@ -150,9 +147,9 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
         compressed_image = ((IceTUInt*)target_image.opaque_internals + 7);
 
         pariGetSubRgbaDepthTextureAsActivePixel(resource_color, description_color, resource_depth,
-            description_depth, compressed_gpu_buffer, texture_width, texture_height, rendered_viewport,
-            image_width, image_height, target_viewport, compressed_image, &compressed_size);
-            
+            description_depth, compressed_gpu_buffer, image_width, image_height, target_viewport,
+            rendered_viewport,compressed_image, &compressed_size);
+
         *((IceTUInt*)target_image.opaque_internals + 6) = 7 * sizeof(IceTUInt) + compressed_size;
     }
     else

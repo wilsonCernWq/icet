@@ -16,7 +16,6 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevState.h>
 
-#include <stdio.h>
 #include <string.h>
 
 static void gl3_destroy(void);
@@ -183,7 +182,11 @@ void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
 {
     /* Vertex shader source */
     const char *vert_source =
+#ifndef __APPLE__
         "#version 130\n"
+#else
+        "#version 330\n"
+#endif
         "\n"
         "in vec3 vertex_position;\n"
         "in vec2 vertex_texcoord;\n"
@@ -195,7 +198,11 @@ void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
         "    frag_texcoord = vertex_texcoord;\n"
         "}\n";
     const char *frag_source =
+#ifndef __APPLE__
         "#version 130\n"
+#else
+        "#version 330\n"
+#endif
         "\n"
         "uniform sampler2D image;\n"
         "\n"
@@ -253,13 +260,14 @@ GLuint icetGL3CompileShader(const char *source, GLenum type)
         glGetShaderInfoLog(shader, log_length, NULL, info);
         if (type == GL_VERTEX_SHADER)
         {
-            fprintf(stderr, "Error: failed to compile vertex shader:\n");
+            icetRaiseError(
+                ICET_INVALID_OPERATION, "Error: failed to compile vertex shader:\n%s", info);
         }
         else
         {
-            fprintf(stderr, "Error: failed to compile fragment shader:\n");
+            icetRaiseError(
+                ICET_INVALID_OPERATION, "Error: failed to compile fragment shader:\n%s", info);
         }
-        fprintf(stderr, "%s\n", info);
         free(info);
         
         return 0;
@@ -283,8 +291,7 @@ void icetGL3LinkShaderProgram(GLuint program)
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
         info = (char*)malloc(log_length + 1);
         glGetProgramInfoLog(program, log_length, NULL, info);
-        fprintf(stderr, "Error: failed to link shader program\n");
-        fprintf(stderr, "%s\n", info);
+        icetRaiseError(ICET_INVALID_OPERATION, "Error: failed to link shader program:\n%s", info);
         free(info);
     }
 }
