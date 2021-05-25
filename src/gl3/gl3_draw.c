@@ -138,7 +138,7 @@ static GLuint setupColorTexture(IceTBoolean *dirty)
                  GL_UNSIGNED_BYTE,
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
-    
+
 #ifdef ICET_USE_PARICOMPRESS
     {
         PariCGResource resource_color;   
@@ -151,9 +151,9 @@ static GLuint setupColorTexture(IceTBoolean *dirty)
         {
             pariUnregisterImage(resource_color, description_color);
         }
-            
+
         resource_color = pariRegisterImage(color_texture_id, &description_color);
-        
+
         icetStateSetPointer(ICET_GL3_COLOR_RESOURCE, resource_color);
         icetStateSetPointer(ICET_GL3_COLOR_DESCRIPTION, description_color);
     }
@@ -270,7 +270,7 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
                  GL_FLOAT,
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
-    
+
 #ifdef ICET_USE_PARICOMPRESS
     {
         IceTInt max_width, max_height;
@@ -296,7 +296,7 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
 
         resource_depth = pariRegisterImage(depth_r32f_texture_id, &description_depth);
         compressed_gpu_buffer = pariAllocateGpuBuffer(max_width, max_height, PARI_IMAGE_ACTIVE_PIXEL);
-        
+
         icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, resource_depth);
         icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, description_depth);
         icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, compressed_gpu_buffer);
@@ -480,13 +480,13 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
                     readback_viewport,
                     (GLuint)*icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER));
     }
-    
+
 #ifdef ICET_USE_PARICOMPRESS
     /* Render depth-component texture to r32f color-based texture. */
     glBindFramebuffer(GL_FRAMEBUFFER, depth_framebuffer_id);
-    
+
     glUseProgram(program);
-    
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depth_texture_id);
     glUniform1i(image_uniform, 0);
@@ -495,7 +495,7 @@ static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
-    
+
     glUseProgram(0);
 #endif
 

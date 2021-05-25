@@ -115,11 +115,17 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
                                              IceTInt *rendered_viewport,
                                              IceTInt *target_viewport)
 {
+#ifdef ICET_USE_PARICOMPRESS
+    IceTEnum color_format, depth_format;
+#endif
+
+    icetTimingBufferReadBegin();
+
     /* Note: efficient compression on GPU only implemented for RGBA (UInt8) + Depth (Float). */
 #ifdef ICET_USE_PARICOMPRESS
-    IceTEnum color_format = icetSparseImageGetColorFormat(target_image);
-    IceTEnum depth_format = icetSparseImageGetDepthFormat(target_image);
-    
+    color_format = icetSparseImageGetColorFormat(target_image);
+    depth_format = icetSparseImageGetDepthFormat(target_image);
+
     if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
     {
         IceTSizeType image_width, image_height;
@@ -136,10 +142,10 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
             *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
         PariGpuBuffer compressed_gpu_buffer = 
             *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
-        
+
         image_width = icetSparseImageGetWidth(target_image);
         image_height = icetSparseImageGetHeight(target_image);
-        
+
         /*
         ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX  -->  6
         ICET_IMAGE_DATA_START_INDEX          -->  7
@@ -157,7 +163,7 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
 #endif
         IceTSizeType width, height;
         IceTImage image_buffer;
-        
+
         width = icetSparseImageGetWidth(target_image);
         height = icetSparseImageGetHeight(target_image);
 
@@ -173,4 +179,6 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
 #ifdef ICET_USE_PARICOMPRESS
     }
 #endif
+
+    icetTimingBufferReadEnd();
 }

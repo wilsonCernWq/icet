@@ -213,7 +213,7 @@ void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
         "void main() {\n"
         "    FragColor = texture(image, frag_texcoord);\n"
         "}\n";
-    
+
     /* Compile vetex shader */
     GLuint vertex_shader = icetGL3CompileShader(vert_source, GL_VERTEX_SHADER);
     /* Compile fragment shader */
@@ -223,15 +223,15 @@ void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
     *program = glCreateProgram();
     glAttachShader(*program, vertex_shader);
     glAttachShader(*program, fragment_shader);
-    
+
     /* Specify input and output attributes for the GPU program */
     glBindAttribLocation(*program, 0, "vertex_position");
     glBindAttribLocation(*program, 1, "vertex_texcoord");
     glBindFragDataLocation(*program, 0, "FragColor");
-    
+
     /* Link compiled GPU program */
     icetGL3LinkShaderProgram(*program);
-    
+
     /* Get uniform location for texture */
     *image_uniform = glGetUniformLocation(*program, "image");
 }
@@ -303,11 +303,11 @@ void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
     GLuint vertex_position_buffer;
     GLuint vertex_texcoord_buffer;
     GLuint vertex_index_buffer;
-    
+
     /* Create vertex array object */
     glGenVertexArrays(1, plane_vertex_array);
     glBindVertexArray(*plane_vertex_array);
-    
+
     /* Vertex positions */
     glGenBuffers(1, &vertex_position_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_position_buffer);
@@ -347,9 +347,9 @@ void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
         };
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLushort), indices, GL_STATIC_DRAW);
     }
-    
+
     glBindVertexArray(0);
-    
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
