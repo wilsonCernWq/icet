@@ -132,11 +132,19 @@ IceTSparseImage icetGL3GetCompressedRenderedBufferImage(
         icetGetPointerv(ICET_GL3_SPARSE_OUTPUT, &sparse_buffer);
         icetGetIntegerv(ICET_GL3_SPARSE_OUTPUT_SIZE, &allocated_pixels);
         if (num_pixels > allocated_pixels) {
+#ifdef ICET_USE_PARICOMPRESS
+            if (sparse_buffer != NULL) {
+                pariFreeCpuBuffer(sparse_buffer);
+            }
+            pariAllocateCpuBuffer(&sparse_buffer,
+                                  icetSparseImageBufferSize(tile_width, tile_height));
+#else
             if (sparse_buffer != NULL) {
                 free(sparse_buffer);
             }
             sparse_buffer =
                 malloc(icetSparseImageBufferSize(tile_width, tile_height));
+#endif
             icetStateSetPointer(ICET_GL3_SPARSE_OUTPUT, sparse_buffer);
             icetStateSetInteger(ICET_GL3_SPARSE_OUTPUT_SIZE, num_pixels);
         }

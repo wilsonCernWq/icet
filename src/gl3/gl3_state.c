@@ -16,6 +16,10 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevState.h>
 
+#ifdef ICET_USE_PARICOMPRESS
+#include <paricompress.h>
+#endif
+
 #include <string.h>
 
 static void gl3_destroy(void);
@@ -185,7 +189,11 @@ void gl3_destroy(void)
         IceTVoid *sparse_buffer;
         icetGetPointerv(ICET_GL3_SPARSE_OUTPUT, &sparse_buffer);
         if (sparse_buffer != NULL) {
+#ifdef ICET_USE_PARICOMPRESS
+            pariFreeCpuBuffer(sparse_buffer);
+#else
             free(sparse_buffer);
+#endif
         }
     }
 }
