@@ -10,6 +10,11 @@
 #ifndef _TEST_MPI_OPENGL_H
 #define _TEST_MPI_OPENGL_H
 
+// CMakeLists should be defining one of these
+#if !defined(ICET_OGL1_TESTS) && !defined(ICET_OGL3_TESTS)
+#error "CMake configure error. Expected definition missing."
+#endif
+
 // Turn of OpenGL deprecation warnigs on apple
 #define GL_SILENCE_DEPRECATION
 
@@ -132,7 +137,7 @@ void initialize_render_window(int width, int height)
 
     /* Create a renderable window. */
     display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA;
-#ifdef GLUT_3_2_CORE_PROFILE
+#if defined(ICET_OGL3_TESTS) && defined(GLUT_3_2_CORE_PROFILE)
     display_mode |= GLUT_3_2_CORE_PROFILE;
 #endif
     glutInitDisplayMode(display_mode);
@@ -181,7 +186,7 @@ void initialize_render_window(int width, int height)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(ICET_OGL3_TESTS)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
     glfwWindowHint(GLFW_RED_BITS, 8);
