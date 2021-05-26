@@ -67,7 +67,6 @@ IceTImage icetReduceCompose(void)
 
         IceTSizeType sparse_image_size;
         IceTVoid *inImageBuffer;
-        IceTSparseImage outSparseImage;
         IceTSparseImage composite_image1;
         IceTSparseImage composite_image2;
 
@@ -77,8 +76,6 @@ IceTImage icetReduceCompose(void)
         sparse_image_size = icetSparseImageBufferSize(max_width, max_height);
         inImageBuffer  = icetGetStateBuffer(REDUCE_IN_IMAGE_BUFFER,
                                             sparse_image_size);
-        outSparseImage = icetGetStateBufferSparseImage(REDUCE_OUT_IMAGE_BUFFER,
-                                                       max_width, max_height);
         composite_image1 = icetGetStateBufferSparseImage(
                                                 REDUCE_COMPOSITE_IMAGE_BUFFER_1,
                                                 max_width, max_height);
@@ -86,12 +83,10 @@ IceTImage icetReduceCompose(void)
                                                 REDUCE_COMPOSITE_IMAGE_BUFFER_2,
                                                 max_width, max_height);
 
-        icetRenderTransferSparseImages(composite_image1,
-                                       composite_image2,
-                                       inImageBuffer,
-                                       outSparseImage,
-                                       tile_image_dest,
-                                       &rendered_image);
+        rendered_image = icetRenderTransferSparseImages(composite_image1,
+                                                        composite_image2,
+                                                        inImageBuffer,
+                                                        tile_image_dest);
     }
 
     if (compose_tile >= 0) {

@@ -17,14 +17,12 @@
 
 #define DIRECT_IMAGE_BUFFER             ICET_STRATEGY_BUFFER_0
 #define DIRECT_IN_SPARSE_IMAGE_BUFFER   ICET_STRATEGY_BUFFER_1
-#define DIRECT_OUT_SPARSE_IMAGE_BUFFER  ICET_STRATEGY_BUFFER_2
-#define DIRECT_TILE_IMAGE_DEST_BUFFER   ICET_STRATEGY_BUFFER_3
+#define DIRECT_TILE_IMAGE_DEST_BUFFER   ICET_STRATEGY_BUFFER_2
 
 IceTImage icetDirectCompose(void)
 {
     IceTImage image;
     IceTVoid *inSparseImageBuffer;
-    IceTSparseImage outSparseImage;
     IceTSizeType sparseImageSize;
     const IceTInt *contrib_counts;
     const IceTInt *display_nodes;
@@ -46,9 +44,6 @@ IceTImage icetDirectCompose(void)
                                                   max_width, max_height);
     inSparseImageBuffer = icetGetStateBuffer(DIRECT_IN_SPARSE_IMAGE_BUFFER,
                                              sparseImageSize);
-    outSparseImage      = icetGetStateBufferSparseImage(
-                                                 DIRECT_OUT_SPARSE_IMAGE_BUFFER,
-                                                 max_width, max_height);
     tile_image_dest     = icetGetStateBuffer(DIRECT_TILE_IMAGE_DEST_BUFFER,
                                              num_tiles*sizeof(IceTInt));
 
@@ -66,10 +61,7 @@ IceTImage icetDirectCompose(void)
     }
 
     icetRaiseDebug("Rendering and transferring images.");
-    icetRenderTransferFullImages(image,
-                                 inSparseImageBuffer,
-                                 outSparseImage,
-                                 tile_image_dest);
+    icetRenderTransferFullImages(image, inSparseImageBuffer, tile_image_dest);
 
     if (display_tile >= 0) {
         if (num_contributors > 0) {
