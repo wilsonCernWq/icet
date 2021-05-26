@@ -115,32 +115,28 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
                                              IceTInt *rendered_viewport,
                                              IceTInt *target_viewport)
 {
-#ifdef ICET_USE_PARICOMPRESS
-    IceTEnum color_format, depth_format;
-#endif
-
-    icetTimingBufferReadBegin();
-
     /* Note: efficient compression on GPU only implemented for RGBA (UInt8) + Depth (Float). */
 #ifdef ICET_USE_PARICOMPRESS
+    IceTEnum color_format, depth_format;
     color_format = icetSparseImageGetColorFormat(target_image);
     depth_format = icetSparseImageGetDepthFormat(target_image);
 
     if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
     {
+        IceTDouble old_time;
         IceTSizeType image_width, image_height;
         IceTUInt compressed_size;
         void *compressed_image;
 
-        PariCGResource resource_color = 
+        PariCGResource resource_color =
             *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_RESOURCE);
-        PariCGResourceDescription description_color = 
+        PariCGResourceDescription description_color =
             *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_DESCRIPTION);
-        PariCGResource resource_depth = 
+        PariCGResource resource_depth =
             *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_RESOURCE);
-        PariCGResourceDescription description_depth = 
+        PariCGResourceDescription description_depth =
             *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
-        PariGpuBuffer compressed_gpu_buffer = 
+        PariGpuBuffer compressed_gpu_buffer =
             *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
 
         image_width = icetSparseImageGetWidth(target_image);
@@ -157,6 +153,12 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
             rendered_viewport,compressed_image, &compressed_size);
 
         *((IceTUInt*)target_image.opaque_internals + 6) = 7 * sizeof(IceTUInt) + compressed_size;
+
+
+        icetGetDoublev(ICET_COMPRESS_TIME, &old_time);
+        icetStateSetDouble(ICET_COMPRESS_TIME, old_time + pariGetTime(PARI_TIME_COMPUTE));
+        icetGetDoublev(ICET_BUFFER_READ_TIME, &old_time);
+        icetStateSetDouble(ICET_BUFFER_READ_TIME, old_time + pariGetTime(PARI_TIME_MEMORY_TRANSFER));
     }
     else
     {
@@ -167,8 +169,12 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
         width = icetSparseImageGetWidth(target_image);
         height = icetSparseImageGetHeight(target_image);
 
+        icetTimingBufferReadBegin();
+
         image_buffer =  icetGetStateBufferImage(ICET_RENDER_BUFFER, width, height);
         readPixels(image_buffer, rendered_viewport, target_viewport);
+
+        icetTimingBufferReadEnd();
 
         icetCompressImageRegion(image_buffer,
                                 target_viewport,
@@ -179,6 +185,4 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
 #ifdef ICET_USE_PARICOMPRESS
     }
 #endif
-
-    icetTimingBufferReadEnd();
 }
