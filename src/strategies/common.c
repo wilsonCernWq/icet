@@ -24,13 +24,13 @@
 #define LARGE_MESSAGE 23
 
 static IceTImage rtfi_image;
-static IceTSparseImage rtfi_outSparseImage;
 static IceTBoolean rtfi_first;
 static IceTVoid *rtfi_generateDataFunc(IceTInt id, IceTInt dest,
                                        IceTSizeType *size) {
     IceTInt rank;
     const IceTInt *tile_list
         = icetUnsafeStateGetInteger(ICET_CONTAINED_TILES_LIST);
+    IceTSparseImage outSparseImage;
     IceTVoid *outBuffer;
 
     icetGetIntegerv(ICET_RANK, &rank);
@@ -41,8 +41,8 @@ static IceTVoid *rtfi_generateDataFunc(IceTInt id, IceTInt dest,
         *size = 0;
         return NULL;
     }
-    icetGetCompressedTileImage(tile_list[id], rtfi_outSparseImage);
-    icetSparseImagePackageForSend(rtfi_outSparseImage, &outBuffer, size);
+    outSparseImage = icetGetCompressedTileImage(tile_list[id]);
+    icetSparseImagePackageForSend(outSparseImage, &outBuffer, size);
     return outBuffer;
 }
 static void rtfi_handleDataFunc(void *inSparseImageBuffer, IceTInt src) {
@@ -71,7 +71,6 @@ static void rtfi_handleDataFunc(void *inSparseImageBuffer, IceTInt src) {
 }
 void icetRenderTransferFullImages(IceTImage image,
                                   IceTVoid *inSparseImageBuffer,
-                                  IceTSparseImage outSparseImage,
                                   IceTInt *tile_image_dest)
 {
     IceTInt num_sending;
@@ -83,7 +82,6 @@ void icetRenderTransferFullImages(IceTImage image,
     IceTInt i;
 
     rtfi_image = image;
-    rtfi_outSparseImage = outSparseImage;
     rtfi_first = ICET_TRUE;
 
     icetGetIntegerv(ICET_NUM_CONTAINED_TILES, &num_sending);
@@ -111,75 +109,56 @@ void icetRenderTransferFullImages(IceTImage image,
 
 static IceTSparseImage rtsi_workingImage;
 static IceTSparseImage rtsi_availableImage;
-static IceTSparseImage rtsi_outSparseImage;
 static IceTBoolean rtsi_first;
 static IceTVoid *rtsi_generateDataFunc(IceTInt id, IceTInt dest,
                                        IceTSizeType *size) {
-    IceTInt rank;
     const IceTInt *tile_list
         = icetUnsafeStateGetInteger(ICET_CONTAINED_TILES_LIST);
+    IceTSparseImage outSparseImage;
     IceTVoid *outBuffer;
+    (void)dest; /* Unused */
 
-    icetGetIntegerv(ICET_RANK, &rank);
-    if (dest == rank) {
-      /* Special case: sending to myself.
-         Just get directly to color and depth buffers. */
-        icetGetCompressedTileImage(tile_list[id], rtsi_workingImage);
-        *size = 0;
-        return NULL;
-    }
-    icetGetCompressedTileImage(tile_list[id], rtsi_outSparseImage);
-    icetSparseImagePackageForSend(rtsi_outSparseImage, &outBuffer, size);
+    outSparseImage = icetGetCompressedTileImage(tile_list[id]);
+    icetSparseImagePackageForSend(outSparseImage, &outBuffer, size);
     return outBuffer;
 }
 static void rtsi_handleDataFunc(void *inSparseImageBuffer, IceTInt src) {
-    if (inSparseImageBuffer == NULL) {
-      /* Superfluous call from send to self. */
-        if (!rtsi_first) {
-            icetRaiseError(ICET_SANITY_CHECK_FAIL,
-                           "Unexpected callback order"
-                           " in icetRenderTransferSparseImages.");
-        }
+    IceTSparseImage inSparseImage
+        = icetSparseImageUnpackageFromReceive(inSparseImageBuffer);
+    if (rtsi_first) {
+        IceTSizeType num_pixels
+            = icetSparseImageGetNumPixels(inSparseImage);
+        icetSparseImageCopyPixels(inSparseImage,
+                                  0,
+                                  num_pixels,
+                                  rtsi_workingImage);
     } else {
-        IceTSparseImage inSparseImage
-            = icetSparseImageUnpackageFromReceive(inSparseImageBuffer);
-        if (rtsi_first) {
-            IceTSizeType num_pixels
-                = icetSparseImageGetNumPixels(inSparseImage);
-            icetSparseImageCopyPixels(inSparseImage,
-                                      0,
-                                      num_pixels,
-                                      rtsi_workingImage);
+        IceTInt rank;
+        const IceTInt *process_orders;
+        IceTSparseImage old_workingImage;
+
+        icetGetIntegerv(ICET_RANK, &rank);
+        process_orders = icetUnsafeStateGetInteger(ICET_PROCESS_ORDERS);
+        if (process_orders[src] < process_orders[rank]) {
+            icetCompressedCompressedComposite(inSparseImage,
+                                              rtsi_workingImage,
+                                              rtsi_availableImage);
         } else {
-            IceTInt rank;
-            const IceTInt *process_orders;
-            IceTSparseImage old_workingImage;
-
-            icetGetIntegerv(ICET_RANK, &rank);
-            process_orders = icetUnsafeStateGetInteger(ICET_PROCESS_ORDERS);
-            if (process_orders[src] < process_orders[rank]) {
-                icetCompressedCompressedComposite(inSparseImage,
-                                                  rtsi_workingImage,
-                                                  rtsi_availableImage);
-            } else {
-                icetCompressedCompressedComposite(rtsi_workingImage,
-                                                  inSparseImage,
-                                                  rtsi_availableImage);
-            }
-
-            old_workingImage = rtsi_workingImage;
-            rtsi_workingImage = rtsi_availableImage;
-            rtsi_availableImage = old_workingImage;
+            icetCompressedCompressedComposite(rtsi_workingImage,
+                                              inSparseImage,
+                                              rtsi_availableImage);
         }
+
+        old_workingImage = rtsi_workingImage;
+        rtsi_workingImage = rtsi_availableImage;
+        rtsi_availableImage = old_workingImage;
     }
     rtsi_first = ICET_FALSE;
 }
-void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
-                                    IceTSparseImage compositeImage2,
-                                    IceTVoid *inImageBuffer,
-                                    IceTSparseImage outSparseImage,
-                                    IceTInt *tile_image_dest,
-                                    IceTSparseImage *resultImage)
+IceTSparseImage icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
+                                               IceTSparseImage compositeImage2,
+                                               IceTVoid *inImageBuffer,
+                                               IceTInt *tile_image_dest)
 {
     IceTInt num_sending;
     const IceTInt *tile_list;
@@ -191,7 +170,6 @@ void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
 
     rtsi_workingImage = compositeImage1;
     rtsi_availableImage = compositeImage2;
-    rtsi_outSparseImage = outSparseImage;
     rtsi_first = ICET_TRUE;
 
     icetGetIntegerv(ICET_NUM_CONTAINED_TILES, &num_sending);
@@ -214,9 +192,9 @@ void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
                               inImageBuffer,
                               icetSparseImageBufferSize(width, height));
 
-    *resultImage = rtsi_workingImage;
-
     free(imageDestinations);
+
+    return rtsi_workingImage;
 }
 
 #define ICET_SEND_RECV_LARGE_SEND_IDS_BUF       ICET_STRATEGY_COMMON_BUF_0

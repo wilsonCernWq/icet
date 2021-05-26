@@ -207,10 +207,12 @@ static void getRenderedBufferImage(IceTImage rendered_image,
    function is used by icetGetCompressedTileImage to get the final image for a
    tile. When a tile is rendered, it might not be centered in the expected
    location due to, for example, a floating viewport. */
-static void getCompressedRenderedBufferImage(IceTImage rendered_image,
-                                             IceTSparseImage target_image,
-                                             IceTInt *rendered_viewport,
-                                             IceTInt *target_viewport);
+static IceTSparseImage getCompressedRenderedBufferImage(
+        IceTImage rendered_image,
+        IceTInt *rendered_viewport,
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height);
 
 /* This function is used to get the image for a tile. It will either render
    the tile on demand (with renderTile) or get the image from a pre-rendered
@@ -2267,7 +2269,7 @@ static void getRenderedBufferImage(IceTImage rendered_image,
     icetTimingBufferReadEnd();
 }
 
-void icetGetCompressedTileImage(IceTInt tile, IceTSparseImage compressed_image)
+IceTSparseImage icetGetCompressedTileImage(IceTInt tile)
 {
     IceTInt screen_viewport[4], target_viewport[4];
     IceTImage raw_image;
@@ -2277,26 +2279,31 @@ void icetGetCompressedTileImage(IceTInt tile, IceTSparseImage compressed_image)
     viewports = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS);
     width = viewports[4*tile+2];
     height = viewports[4*tile+3];
-    icetSparseImageSetDimensions(compressed_image, width, height);
 
     raw_image = generateTile(tile, screen_viewport, target_viewport,
                              icetImageNull());
 
     if ((target_viewport[2] < 1) || (target_viewport[3] < 1)) {
         /* Tile empty.  Just clear result. */
-        icetClearSparseImage(compressed_image);
-        return;
+        IceTSparseImage empty = icetGetStateBufferSparseImage(
+                    ICET_SPARSE_TILE_BUFFER, width, height);
+        icetClearSparseImage(empty);
+        return empty;
     }
 
-    getCompressedRenderedBufferImage(
-        raw_image, compressed_image, screen_viewport, target_viewport);
+    return getCompressedRenderedBufferImage(
+        raw_image, screen_viewport, target_viewport, width, height);
 }
 
-static void getCompressedRenderedBufferImage(IceTImage rendered_image,
-                                             IceTSparseImage target_image,
-                                             IceTInt *rendered_viewport,
-                                             IceTInt *target_viewport)
+static IceTSparseImage getCompressedRenderedBufferImage(
+        IceTImage rendered_image,
+        IceTInt *rendered_viewport,
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height)
 {
+    IceTSparseImage sparseImage;
+
     if (*icetUnsafeStateGetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER))
     {
         IceTVoid* getImagePointer;
@@ -2305,16 +2312,19 @@ static void getCompressedRenderedBufferImage(IceTImage rendered_image,
         icetGetPointerv(
             ICET_GET_COMPRESSED_RENDERED_BUFFER_IMAGE, &getImagePointer);
         getImage = (IceTGetCompressedRenderedBufferImage)getImagePointer;
-        (*getImage)(target_image, rendered_viewport, target_viewport);
-        return;
+        return (*getImage)(
+            rendered_viewport, target_viewport, tile_width, tile_height);
     }
 
+    sparseImage = icetGetStateBufferSparseImage(
+                ICET_SPARSE_TILE_BUFFER, tile_width, tile_height);
     icetCompressImageRegion(rendered_image,
                             rendered_viewport,
                             target_viewport,
-                            icetSparseImageGetWidth(target_image),
-                            icetSparseImageGetHeight(target_image),
-                            target_image);
+                            tile_width,
+                            tile_height,
+                            sparseImage);
+    return sparseImage;
 }
 
 void icetCompressImage(const IceTImage image,

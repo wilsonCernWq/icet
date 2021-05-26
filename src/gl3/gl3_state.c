@@ -84,6 +84,8 @@ void icetGL3Initialize(void)
     icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, NULL);
     icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, NULL);
     icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, NULL);
+    icetStateSetPointer(ICET_GL3_SPARSE_OUTPUT, NULL);
+    icetStateSetInteger(ICET_GL3_SPARSE_OUTPUT_SIZE, 0);
 
     icetStateSetPointer(ICET_RENDER_LAYER_DESTRUCTOR, gl3_destroy);
 }
@@ -174,6 +176,16 @@ void gl3_destroy(void)
         if (gl_vertex_array != 0)
         {
             glDeleteVertexArrays(1, &gl_vertex_array);
+        }
+    }
+
+    /* If icetGL3GetCompressedRenderBufferImage in gl3_image.c uses a special
+     * allocator, then a matching deallocator should be used here. */
+    {
+        IceTVoid *sparse_buffer;
+        icetGetPointerv(ICET_GL3_SPARSE_OUTPUT, &sparse_buffer);
+        if (sparse_buffer != NULL) {
+            free(sparse_buffer);
         }
     }
 }

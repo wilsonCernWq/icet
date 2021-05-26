@@ -382,13 +382,15 @@ static void do_send_receive(const struct node_info *my_info, int tile_held,
                        my_info->send_dest);
         if (tile_held == my_info->tile_sending) {
             icetCompressImage(image, outSparseImage);
+            icetSparseImagePackageForSend(outSparseImage,
+                                          &package_buffer, &package_size);
             tile_held = -1;
         } else {
-            icetGetCompressedTileImage(my_info->tile_sending,
-                                       outSparseImage);
+            IceTSparseImage tileImage =
+                    icetGetCompressedTileImage(my_info->tile_sending);
+            icetSparseImagePackageForSend(tileImage,
+                                          &package_buffer, &package_size);
         }
-        icetSparseImagePackageForSend(outSparseImage,
-                                      &package_buffer, &package_size);
     }
 
     if (my_info->tile_receiving != -1) {

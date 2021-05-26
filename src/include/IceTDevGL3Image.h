@@ -24,10 +24,11 @@ ICET_GL3_EXPORT void icetGL3GetRenderedBufferImage(IceTImage target_image,
                                                    IceTInt *rendered_viewport,
                                                    IceTInt *target_viewport);
 
-ICET_GL3_EXPORT void icetGL3GetCompressedRenderedBufferImage(
-        IceTSparseImage target_image,
+ICET_GL3_EXPORT IceTSparseImage icetGL3GetCompressedRenderedBufferImage(
         IceTInt *rendered_viewport,
-        IceTInt *target_viewport);
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height);
 
 #ifdef __cplusplus
 }
