@@ -203,7 +203,7 @@ static int SimpleExampleRun()
     }
 
     /* Here is an example of an animation loop. */
-    for (angle = 0; angle < 360; angle += 10) {
+    for (angle = 0; angle < 360; angle += 1) {
         IceTDouble projection_matrix[16];
         IceTDouble modelview_matrix[16];
         IceTImage composite_image;

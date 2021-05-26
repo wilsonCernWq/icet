@@ -130,4 +130,6 @@ typedef IceTInt64 IceTPointerArithmetic;
 
 #cmakedefine ICET_USE_MPE
 
+#cmakedefine ICET_USE_PARICOMPRESS
+
 #endif /*__IceTConfig_h*/

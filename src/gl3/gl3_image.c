@@ -14,6 +14,10 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevTiming.h>
 
+#ifdef ICET_USE_PARICOMPRESS
+#include <paricompress.h>
+#endif
+
 static void readPixels(IceTImage target_image,
                        IceTInt *rendered_viewport,
                        IceTInt *target_viewport)
@@ -73,7 +77,7 @@ static void readPixels(IceTImage target_image,
     }
 
     if (depth_format == ICET_IMAGE_DEPTH_FLOAT) {
-        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);;
+        IceTFloat *depthBuffer = icetImageGetDepthf(target_image);
         glReadPixels((GLint)x_offset,
                      (GLint)y_offset,
                      (GLsizei)target_viewport[2],
@@ -111,22 +115,74 @@ void icetGL3GetCompressedRenderedBufferImage(IceTSparseImage target_image,
                                              IceTInt *rendered_viewport,
                                              IceTInt *target_viewport)
 {
-    /* TODO: This is inefficient. It would be better to compress the image
-     * on the graphics card and transfer the sparse pixels back. */
+    /* Note: efficient compression on GPU only implemented for RGBA (UInt8) + Depth (Float). */
+#ifdef ICET_USE_PARICOMPRESS
+    IceTEnum color_format, depth_format;
+    color_format = icetSparseImageGetColorFormat(target_image);
+    depth_format = icetSparseImageGetDepthFormat(target_image);
 
-    IceTSizeType width, height;
-    IceTImage image_buffer;
+    if (color_format == ICET_IMAGE_COLOR_RGBA_UBYTE && depth_format == ICET_IMAGE_DEPTH_FLOAT)
+    {
+        IceTDouble old_time;
+        IceTSizeType image_width, image_height;
+        IceTUInt compressed_size;
+        void *compressed_image;
 
-    width = icetSparseImageGetWidth(target_image);
-    height = icetSparseImageGetHeight(target_image);
+        PariCGResource resource_color =
+            *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_RESOURCE);
+        PariCGResourceDescription description_color =
+            *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_COLOR_DESCRIPTION);
+        PariCGResource resource_depth =
+            *(PariCGResource*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_RESOURCE);
+        PariCGResourceDescription description_depth =
+            *(PariCGResourceDescription*)icetUnsafeStateGetPointer(ICET_GL3_DEPTH_DESCRIPTION);
+        PariGpuBuffer compressed_gpu_buffer =
+            *(PariGpuBuffer*)icetUnsafeStateGetPointer(ICET_GL3_SPARSE_GPU_BUFFER);
 
-    image_buffer =  icetGetStateBufferImage(ICET_RENDER_BUFFER, width, height);
-    readPixels(image_buffer, rendered_viewport, target_viewport);
+        image_width = icetSparseImageGetWidth(target_image);
+        image_height = icetSparseImageGetHeight(target_image);
 
-    icetCompressImageRegion(image_buffer,
-                            target_viewport,
-                            target_viewport,
-                            width,
-                            height,
-                            target_image);
+        /*
+        ICET_IMAGE_ACTUAL_BUFFER_SIZE_INDEX  -->  6
+        ICET_IMAGE_DATA_START_INDEX          -->  7
+        */
+        compressed_image = ((IceTUInt*)target_image.opaque_internals + 7);
+
+        pariGetSubRgbaDepthTextureAsActivePixel(resource_color, description_color, resource_depth,
+            description_depth, compressed_gpu_buffer, image_width, image_height, target_viewport,
+            rendered_viewport,compressed_image, &compressed_size);
+
+        *((IceTUInt*)target_image.opaque_internals + 6) = 7 * sizeof(IceTUInt) + compressed_size;
+
+
+        icetGetDoublev(ICET_COMPRESS_TIME, &old_time);
+        icetStateSetDouble(ICET_COMPRESS_TIME, old_time + pariGetTime(PARI_TIME_COMPUTE));
+        icetGetDoublev(ICET_BUFFER_READ_TIME, &old_time);
+        icetStateSetDouble(ICET_BUFFER_READ_TIME, old_time + pariGetTime(PARI_TIME_MEMORY_TRANSFER));
+    }
+    else
+    {
+#endif
+        IceTSizeType width, height;
+        IceTImage image_buffer;
+
+        width = icetSparseImageGetWidth(target_image);
+        height = icetSparseImageGetHeight(target_image);
+
+        icetTimingBufferReadBegin();
+
+        image_buffer =  icetGetStateBufferImage(ICET_RENDER_BUFFER, width, height);
+        readPixels(image_buffer, rendered_viewport, target_viewport);
+
+        icetTimingBufferReadEnd();
+
+        icetCompressImageRegion(image_buffer,
+                                target_viewport,
+                                target_viewport,
+                                width,
+                                height,
+                                target_image);
+#ifdef ICET_USE_PARICOMPRESS
+    }
+#endif
 }

@@ -19,6 +19,10 @@
 #include <string.h>
 
 static void gl3_destroy(void);
+static void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform);
+static GLuint icetGL3CompileShader(const char *source, GLenum type);
+static void icetGL3LinkShaderProgram(GLuint program);
+static void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array);
 
 static const char gl_identifier[] = "OGL3";
 
@@ -52,12 +56,34 @@ void icetGL3Initialize(void)
     icetStateSetPointer(ICET_GL3_DRAW_FUNCTION, NULL);
     icetStateSetInteger(ICET_GL3_COLOR_TEXTURE, 0);
     icetStateSetInteger(ICET_GL3_DEPTH_TEXTURE, 0);
+    icetStateSetInteger(ICET_GL3_DEPTH_R32F_TEXTURE, 0);
 
     {
-        GLuint framebuffer_id;
-        glGenFramebuffers(1, &framebuffer_id);
-        icetStateSetInteger(ICET_GL3_FRAMEBUFFER, framebuffer_id);
+        GLuint framebuffer_id[2];
+        glGenFramebuffers(2, framebuffer_id);
+        icetStateSetInteger(ICET_GL3_FRAMEBUFFER, framebuffer_id[0]);
+        icetStateSetInteger(ICET_GL3_DEPTH_FRAMEBUFFER, framebuffer_id[1]);
     }
+
+    {
+        GLuint program;
+        GLint image_uniform;
+        icetGL3CreateRenderImageProgram(&program, &image_uniform);
+        icetStateSetInteger(ICET_GL3_RENDERIMAGE_PROGRAM, program);
+        icetStateSetInteger(ICET_GL3_RENDERIMAGE_IMAGE_UNIFORM, image_uniform);
+    }
+
+    {
+        GLuint plane_vertex_array;
+        icetGL3CreatePlaneVertexArray(&plane_vertex_array);
+        icetStateSetInteger(ICET_GL3_PLANE_VERTEXARRAY, plane_vertex_array);
+    }
+    
+    icetStateSetPointer(ICET_GL3_COLOR_RESOURCE, NULL);
+    icetStateSetPointer(ICET_GL3_COLOR_DESCRIPTION, NULL);
+    icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, NULL);
+    icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, NULL);
+    icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, NULL);
 
     icetStateSetPointer(ICET_RENDER_LAYER_DESTRUCTOR, gl3_destroy);
 }
@@ -108,6 +134,16 @@ void gl3_destroy(void)
             glDeleteTextures(1, &gl_texture);
         }
     }
+    {
+        IceTInt icet_texture;
+        GLuint gl_texture;
+        icetGetIntegerv(ICET_GL3_DEPTH_R32F_TEXTURE, &icet_texture);
+        gl_texture = icet_texture;
+        if (gl_texture != 0)
+        {
+            glDeleteTextures(1, &gl_texture);
+        }
+    }
 
     {
         IceTInt icet_framebuffer;
@@ -119,4 +155,201 @@ void gl3_destroy(void)
             glDeleteTextures(1, &gl_framebuffer);
         }
     }
+    {
+        IceTInt icet_framebuffer;
+        GLuint gl_framebuffer;
+        icetGetIntegerv(ICET_GL3_DEPTH_FRAMEBUFFER, &icet_framebuffer);
+        gl_framebuffer = icet_framebuffer;
+        if (gl_framebuffer != 0)
+        {
+            glDeleteTextures(1, &gl_framebuffer);
+        }
+    }
+    
+    {
+        IceTInt icet_vertex_array;
+        GLuint gl_vertex_array;
+        icetGetIntegerv(ICET_GL3_PLANE_VERTEXARRAY, &icet_vertex_array);
+        gl_vertex_array = icet_vertex_array;
+        if (gl_vertex_array != 0)
+        {
+            glDeleteVertexArrays(1, &gl_vertex_array);
+        }
+    }
+}
+
+void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
+{
+    /* Vertex shader source */
+    const char *vert_source =
+#ifndef __APPLE__
+        "#version 130\n"
+#else
+        "#version 330\n"
+#endif
+        "\n"
+        "in vec3 vertex_position;\n"
+        "in vec2 vertex_texcoord;\n"
+        "\n"
+        "out vec2 frag_texcoord;\n"
+        "\n"
+        "void main() {\n"
+        "    gl_Position = vec4(vertex_position, 1.0);\n"
+        "    frag_texcoord = vertex_texcoord;\n"
+        "}\n";
+    const char *frag_source =
+#ifndef __APPLE__
+        "#version 130\n"
+#else
+        "#version 330\n"
+#endif
+        "\n"
+        "uniform sampler2D image;\n"
+        "\n"
+        "in vec2 frag_texcoord;\n"
+        "\n"
+        "out vec4 FragColor;\n"
+        "\n"
+        "void main() {\n"
+        "    FragColor = texture(image, frag_texcoord);\n"
+        "}\n";
+
+    /* Compile vetex shader */
+    GLuint vertex_shader = icetGL3CompileShader(vert_source, GL_VERTEX_SHADER);
+    /* Compile fragment shader */
+    GLuint fragment_shader = icetGL3CompileShader(frag_source, GL_FRAGMENT_SHADER);
+
+    /* Create GPU program from the compiled vertex and fragment shaders */
+    *program = glCreateProgram();
+    glAttachShader(*program, vertex_shader);
+    glAttachShader(*program, fragment_shader);
+
+    /* Specify input and output attributes for the GPU program */
+    glBindAttribLocation(*program, 0, "vertex_position");
+    glBindAttribLocation(*program, 1, "vertex_texcoord");
+    glBindFragDataLocation(*program, 0, "FragColor");
+
+    /* Link compiled GPU program */
+    icetGL3LinkShaderProgram(*program);
+
+    /* Get uniform location for texture */
+    *image_uniform = glGetUniformLocation(*program, "image");
+}
+
+GLuint icetGL3CompileShader(const char *source, GLenum type)
+{
+    /* Create a shader object */
+    GLint status;
+    GLuint shader = glCreateShader(type);
+
+    /* Send the source to the shader object */
+    const GLint len = strlen(source);
+    glShaderSource(shader, 1, &source, &len);
+
+    /* Compile the shader program */
+    glCompileShader(shader);
+
+    /* Check to see if it compiled successfully */
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    if (status == 0)
+    {
+        GLint log_length;
+        char *info;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+        info = (char*)malloc(log_length + 1);
+        glGetShaderInfoLog(shader, log_length, NULL, info);
+        if (type == GL_VERTEX_SHADER)
+        {
+            icetRaiseError(
+                ICET_INVALID_OPERATION, "Error: failed to compile vertex shader:\n%s", info);
+        }
+        else
+        {
+            icetRaiseError(
+                ICET_INVALID_OPERATION, "Error: failed to compile fragment shader:\n%s", info);
+        }
+        free(info);
+        
+        return 0;
+    }
+
+    return shader;
+}
+
+void icetGL3LinkShaderProgram(GLuint program)
+{
+    /* Link GPU program */
+    GLint status;
+    glLinkProgram(program);
+
+    /* Check to see if it linked successfully */
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
+    if (status == 0)
+    {
+        GLint log_length;
+        char *info;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
+        info = (char*)malloc(log_length + 1);
+        glGetProgramInfoLog(program, log_length, NULL, info);
+        icetRaiseError(ICET_INVALID_OPERATION, "Error: failed to link shader program:\n%s", info);
+        free(info);
+    }
+}
+
+void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
+{
+    GLuint vertex_position_attrib = 0;
+    GLuint vertex_texcoord_attrib = 1;
+    GLuint vertex_position_buffer;
+    GLuint vertex_texcoord_buffer;
+    GLuint vertex_index_buffer;
+
+    /* Create vertex array object */
+    glGenVertexArrays(1, plane_vertex_array);
+    glBindVertexArray(*plane_vertex_array);
+
+    /* Vertex positions */
+    glGenBuffers(1, &vertex_position_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_position_buffer);
+    {
+        GLfloat vertices[12] = {
+            -1.0, -1.0,  0.0,
+             1.0, -1.0,  0.0,
+             1.0,  1.0,  0.0,
+            -1.0,  1.0,  0.0
+        };
+        glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+    }
+    glEnableVertexAttribArray(vertex_position_attrib);
+    glVertexAttribPointer(vertex_position_attrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    /* Vertex texture coordinates */
+    glGenBuffers(1, &vertex_texcoord_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_texcoord_buffer);
+    {
+        GLfloat texcoords[8] = {
+            0.0,  0.0,
+            1.0,  0.0,
+            1.0,  1.0,
+            0.0,  1.0
+        };
+        glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), texcoords, GL_STATIC_DRAW);
+    }
+    glEnableVertexAttribArray(vertex_texcoord_attrib);
+    glVertexAttribPointer(vertex_texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    /* Faces of the triangles */
+    glGenBuffers(1, &vertex_index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vertex_index_buffer);
+    {
+        GLushort indices[6] = {
+             0,  1,  2,    0,  2,  3
+        };
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLushort), indices, GL_STATIC_DRAW);
+    }
+
+    glBindVertexArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
