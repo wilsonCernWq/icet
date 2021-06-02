@@ -192,8 +192,8 @@ IceTSparseImage icetGL3GetCompressedRenderedBufferImage(
         icetStateSetDouble(ICET_BUFFER_READ_TIME, old_time + pariGetTime(PARI_TIME_MEMORY_TRANSFER));
     }
     else
-    {
 #endif
+    {
         IceTImage image_buffer;
 
         icetTimingBufferReadBegin();
@@ -210,9 +210,7 @@ IceTSparseImage icetGL3GetCompressedRenderedBufferImage(
                                 tile_width,
                                 tile_height,
                                 target_image);
-#ifdef ICET_USE_PARICOMPRESS
     }
-#endif
 
     return target_image;
 }

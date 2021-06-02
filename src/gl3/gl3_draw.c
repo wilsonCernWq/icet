@@ -33,9 +33,11 @@ static void setupOpenGL3Render(GLfloat *background_color,
                                IceTBoolean *ok_to_proceed);
 static GLuint setupColorTexture(IceTBoolean *dirty);
 static GLuint setupDepthTexture(IceTBoolean *dirty);
-static GLuint setupDepthR32fTexture(IceTBoolean *dirty);
 static void setupFramebuffer();
+#ifdef ICET_USE_PARICOMPRESS
+static GLuint setupDepthR32fTexture(IceTBoolean *dirty);
 static void setupDepthFramebuffer();
+#endif
 static void finalizeOpenGL3Render(const GLfloat *background_color,
                                   IceTDrawCallbackType original_callback);
 static void openGL3DrawCallbackFunction(const IceTDouble *projection_matrix,
@@ -220,6 +222,50 @@ static GLuint setupDepthTexture(IceTBoolean *dirty)
     return depth_texture_id;
 }
 
+static void setupFramebuffer()
+{
+    GLuint color_buffer_id;
+    GLuint depth_buffer_id;
+    GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
+    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+    IceTInt global_viewport[4];
+    IceTSizeType physical_width;
+    IceTSizeType physical_height;
+    GLint max_size;
+    IceTBoolean buffer_dirty = ICET_FALSE;
+
+    /* Determine what size buffer to use. */
+    icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
+    physical_width = MIN(global_viewport[2], max_size);
+    physical_height = MIN(global_viewport[3], max_size);
+    icetPhysicalRenderSize(physical_width, physical_height);
+
+    /* Create any necessary OpenGL objects for buffer. */
+    color_buffer_id = setupColorTexture(&buffer_dirty);
+    depth_buffer_id = setupDepthTexture(&buffer_dirty);
+
+    /* Enable framebuffer and update textures if necessary. */
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
+
+    if (buffer_dirty) {
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+                               GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_2D,
+                               color_buffer_id,
+                               0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,
+                               GL_DEPTH_STENCIL_ATTACHMENT,
+                               GL_TEXTURE_2D,
+                               depth_buffer_id,
+                               0);
+        glDrawBuffers(1, &draw_buffer);
+    }
+
+    glViewport(0, 0, physical_width, physical_height);
+}
+
+#ifdef ICET_USE_PARICOMPRESS
 static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
 {
     IceTInt width;
@@ -271,7 +317,6 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
                  NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-#ifdef ICET_USE_PARICOMPRESS
     {
         IceTInt max_width, max_height;
         PariCGResource resource_depth;   
@@ -301,53 +346,9 @@ static GLuint setupDepthR32fTexture(IceTBoolean *dirty)
         icetStateSetPointer(ICET_GL3_DEPTH_DESCRIPTION, description_depth);
         icetStateSetPointer(ICET_GL3_SPARSE_GPU_BUFFER, compressed_gpu_buffer);
     }
-#endif
 
     icetStateSetInteger(ICET_GL3_DEPTH_R32F_TEXTURE, depth_r32f_texture_id);
     return depth_r32f_texture_id;
-}
-
-static void setupFramebuffer()
-{
-    GLuint color_buffer_id;
-    GLuint depth_buffer_id;
-    GLuint framebuffer_id = *icetUnsafeStateGetInteger(ICET_GL3_FRAMEBUFFER);
-    GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
-    IceTInt global_viewport[4];
-    IceTSizeType physical_width;
-    IceTSizeType physical_height;
-    GLint max_size;
-    IceTBoolean buffer_dirty = ICET_FALSE;
-
-    /* Determine what size buffer to use. */
-    icetGetIntegerv(ICET_GLOBAL_VIEWPORT, global_viewport);
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
-    physical_width = MIN(global_viewport[2], max_size);
-    physical_height = MIN(global_viewport[3], max_size);
-    icetPhysicalRenderSize(physical_width, physical_height);
-
-    /* Create any necessary OpenGL objects for buffer. */
-    color_buffer_id = setupColorTexture(&buffer_dirty);
-    depth_buffer_id = setupDepthTexture(&buffer_dirty);
-
-    /* Enable framebuffer and update textures if necessary. */
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
-
-    if (buffer_dirty) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER,
-                               GL_COLOR_ATTACHMENT0,
-                               GL_TEXTURE_2D,
-                               color_buffer_id,
-                               0);
-        glFramebufferTexture2D(GL_FRAMEBUFFER,
-                               GL_DEPTH_STENCIL_ATTACHMENT,
-                               GL_TEXTURE_2D,
-                               depth_buffer_id,
-                               0);
-        glDrawBuffers(1, &draw_buffer);
-    }
-
-    glViewport(0, 0, physical_width, physical_height);
 }
 
 static void setupDepthFramebuffer()
@@ -385,6 +386,7 @@ static void setupDepthFramebuffer()
 
     glViewport(0, 0, physical_width, physical_height);
 }
+#endif
 
 static void setupOpenGL3Render(GLfloat *background_color,
                                IceTDrawCallbackType *original_callback,

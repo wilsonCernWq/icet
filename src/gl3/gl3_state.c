@@ -23,10 +23,12 @@
 #include <string.h>
 
 static void gl3_destroy(void);
+#ifdef ICET_USE_PARICOMPRESS
 static void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform);
 static GLuint icetGL3CompileShader(const char *source, GLenum type);
 static void icetGL3LinkShaderProgram(GLuint program);
 static void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array);
+#endif
 
 static const char gl_identifier[] = "OGL3";
 
@@ -68,7 +70,7 @@ void icetGL3Initialize(void)
         icetStateSetInteger(ICET_GL3_FRAMEBUFFER, framebuffer_id[0]);
         icetStateSetInteger(ICET_GL3_DEPTH_FRAMEBUFFER, framebuffer_id[1]);
     }
-
+#ifdef ICET_USE_PARICOMPRESS
     {
         GLuint program;
         GLint image_uniform;
@@ -82,7 +84,11 @@ void icetGL3Initialize(void)
         icetGL3CreatePlaneVertexArray(&plane_vertex_array);
         icetStateSetInteger(ICET_GL3_PLANE_VERTEXARRAY, plane_vertex_array);
     }
-    
+#else
+    icetStateSetInteger(ICET_GL3_RENDERIMAGE_PROGRAM, 0);
+    icetStateSetInteger(ICET_GL3_RENDERIMAGE_IMAGE_UNIFORM, 0);
+    icetStateSetInteger(ICET_GL3_PLANE_VERTEXARRAY, 0);
+#endif
     icetStateSetPointer(ICET_GL3_COLOR_RESOURCE, NULL);
     icetStateSetPointer(ICET_GL3_COLOR_DESCRIPTION, NULL);
     icetStateSetPointer(ICET_GL3_DEPTH_RESOURCE, NULL);
@@ -198,6 +204,7 @@ void gl3_destroy(void)
     }
 }
 
+#ifdef ICET_USE_PARICOMPRESS
 void icetGL3CreateRenderImageProgram(GLuint *program, GLint *image_uniform)
 {
     /* Vertex shader source */
@@ -373,3 +380,4 @@ void icetGL3CreatePlaneVertexArray(GLuint *plane_vertex_array)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+#endif
