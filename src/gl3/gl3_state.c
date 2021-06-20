@@ -84,6 +84,7 @@ void icetGL3Initialize(void)
         icetGL3CreatePlaneVertexArray(&plane_vertex_array);
         icetStateSetInteger(ICET_GL3_PLANE_VERTEXARRAY, plane_vertex_array);
     }
+    pariSetGpuDevice(PARI_DEVICE_OPENGL);
 #else
     icetStateSetInteger(ICET_GL3_RENDERIMAGE_PROGRAM, 0);
     icetStateSetInteger(ICET_GL3_RENDERIMAGE_IMAGE_UNIFORM, 0);
