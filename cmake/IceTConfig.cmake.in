@@ -14,7 +14,7 @@
 
 # This file should be installed in the lib directory.  Find the root directory.
 GET_FILENAME_COMPONENT(_dir "${CMAKE_CURRENT_LIST_FILE}" PATH)
-GET_FILENAME_COMPONENT(_install_dir "${_dir}/.." ABSOLUTE)
+GET_FILENAME_COMPONENT(_install_dir "${_dir}/../../.." ABSOLUTE)
 
 # Load the targets include (next to this one).
 INCLUDE("${_dir}/IceTTargets.cmake")
