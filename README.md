@@ -1,3 +1,5 @@
+This is a clone of IceT from the [Kitware Gitlab](https://gitlab.kitware.com/icet/icet).
+
 > *****************************************************************************
 >
 > README and installation instructions for IceT
