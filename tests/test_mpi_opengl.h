@@ -10,12 +10,18 @@
 #ifndef _TEST_MPI_OPENGL_H
 #define _TEST_MPI_OPENGL_H
 
+// CMakeLists should be defining one of these
+#if !defined(ICET_OGL1_TESTS) && !defined(ICET_OGL3_TESTS)
+#error "CMake configure error. Expected definition missing."
+#endif
+
+// Turn of OpenGL deprecation warnigs on apple
+#define GL_SILENCE_DEPRECATION
+
 #define ICET_NO_MPI_RENDERING_FUNCTIONS
 #include "test_mpi.h"
 
 #include "test_config.h"
-
-#include <IceTGL.h>
 
 #ifdef ICET_TESTS_USE_GLUT
 #ifndef __APPLE__
@@ -44,7 +50,7 @@ static void checkOglError(void)
     GLenum error = glGetError();
 
 #define CASE_ERROR(ename)                                               \
-    case ename: printrank("## Current IceT error = " #ename "\n"); break;
+    case ename: printrank("## Current OpenGL error = " #ename "\n"); break;
 
     switch (error) {
       case GL_NO_ERROR: break;
@@ -124,12 +130,17 @@ int run_test(int (*test_function)())
 void initialize_render_window(int width, int height)
 {
     IceTInt rank, num_proc;
+    unsigned int display_mode;
 
     icetGetIntegerv(ICET_RANK, &rank);
     icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
 
     /* Create a renderable window. */
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA);
+    display_mode = GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_ALPHA;
+#if defined(ICET_OGL3_TESTS) && defined(GLUT_3_2_CORE_PROFILE)
+    display_mode |= GLUT_3_2_CORE_PROFILE;
+#endif
+    glutInitDisplayMode(display_mode);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(width, height);
 
@@ -138,8 +149,6 @@ void initialize_render_window(int width, int height)
         sprintf(title, "IceT Test %d of %d", rank, num_proc);
         windowId = glutCreateWindow(title);
     }
-
-    icetGLInitialize();
 }
 
 void swap_buffers(void)
@@ -174,6 +183,12 @@ void initialize_render_window(int width, int height)
     icetGetIntegerv(ICET_NUM_PROCESSES, &num_proc);
 
     /* Create a renderable window. */
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if defined(__APPLE__) && defined(ICET_OGL3_TESTS)
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
     glfwWindowHint(GLFW_RED_BITS, 8);
     glfwWindowHint(GLFW_GREEN_BITS, 8);
     glfwWindowHint(GLFW_BLUE_BITS, 8);
@@ -188,8 +203,6 @@ void initialize_render_window(int width, int height)
     }
 
     glfwMakeContextCurrent(window);
-
-    icetGLInitialize();
 }
 
 void swap_buffers(void)

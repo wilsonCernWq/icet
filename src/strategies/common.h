@@ -17,9 +17,9 @@
 
    Renders all the tiles that are specified in the ICET_CONTAINED_TILES
    state array and sends them to the processors with ranks specified in
-   tile_image_dest.  This method is guaranteed not to deadlock.  It only
-   uses memory given with the buffer arguments, and will make its best
-   efforts to get the graphics and network hardware to run in parallel.
+   tile_image_dest.  This method is guaranteed not to deadlock.  It make
+   its best efforts to get the graphics and network hardware to run in
+   parallel.
 
    image - An image big enough to hold color and/or depth values
         that is ICET_MAX_PIXELS big.  The results will be put in this
@@ -28,17 +28,13 @@
         depth information for an image that is ICET_MAX_PIXELS big.
         The size can be determined with the icetSparseImageBufferSize
         function in image.h.
-   outSparseImage - A sparse image big enough to hold color and/or depth
-        values that is ICET_MAX_PIXELS big.
    tile_image_dest - if tile t is in ICET_CONTAINED_TILES, then the
         rendered image for tile t is sent to tile_image_dest[t].
 
-   This function returns an image object (using the image) containing the
-   composited image send to this process.  The contents are undefined if nothing
-   sent to this process.  */
+   This function fills the image object with the composited image send to this
+   process. The contents are undefined if nothing sent to this process. */
 void icetRenderTransferFullImages(IceTImage image,
                                   IceTVoid *inSparseImageBuffer,
-                                  IceTSparseImage outSparseImage,
                                   IceTInt *tile_image_dest);
 
 /* icetRenderTransferSparseImages
@@ -58,20 +54,17 @@ void icetRenderTransferFullImages(IceTImage image,
         that is ICET_MAX_PIXELS big.
    tile_image_dest - if tile t is in ICET_CONTAINED_TILES, then the
         rendered image for tile t is sent to tile_image_dest[t].
-   resultImage - Will be set to the image with the final results.  It will point
-        to either compositeImage1 or compositeImage2 depending on which buffer
-        the result happened to end in.
 
-   This function returns an image object (using the imageBuffer)
+   This function returns an image object (possibly using the imageBuffer)
    containing the composited image send to this process.  The contents
-   are undefined if nothing sent to this process.
+   are undefined if nothing sent to this process.  Otherwise, it will use
+   either compositeImage1 or compositeImage2 depending on which buffer
+   the result happened to end in.
 */
-void icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
-                                    IceTSparseImage compositeImage2,
-                                    IceTVoid *inImageBuffer,
-                                    IceTSparseImage outSparseImage,
-                                    IceTInt *tile_image_dest,
-                                    IceTSparseImage *resultImage);
+IceTSparseImage icetRenderTransferSparseImages(IceTSparseImage compositeImage1,
+                                               IceTSparseImage compositeImage2,
+                                               IceTVoid *inImageBuffer,
+                                               IceTInt *tile_image_dest);
 
 
 /* icetSendRecvLargeMessages

@@ -437,7 +437,7 @@ static int DoCompressionTest(IceTEnum color_format, IceTEnum depth_format,
     viewport[2] = (IceTInt)SCREEN_WIDTH;  viewport[3] = (IceTInt)SCREEN_HEIGHT;
     icetStateSetIntegerv(ICET_CONTAINED_VIEWPORT, 4, viewport);
     printstat("Now render and get compressed image.\n");
-    icetGetCompressedTileImage(0, compressedimage);
+    compressedimage = icetGetCompressedTileImage(0);
     size = icetSparseImageGetCompressedBufferSize(compressedimage);
     printstat("Expected size: %d.  Actual size: %d\n",
               (int)compressedsize, (int)size);

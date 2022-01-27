@@ -147,8 +147,17 @@ ICET_EXPORT void icetClearSparseImage(IceTSparseImage image);
 
 ICET_EXPORT void icetGetTileImage(IceTInt tile, IceTImage image);
 
-ICET_EXPORT void icetGetCompressedTileImage(IceTInt tile,
-                                            IceTSparseImage compressed_image);
+typedef void (*IceTGetRenderedBufferImage)(IceTImage target_image,
+                                           IceTInt *rendered_viewport,
+                                           IceTInt *target_viewport);
+
+ICET_EXPORT IceTSparseImage icetGetCompressedTileImage(IceTInt tile);
+
+typedef IceTSparseImage (*IceTGetCompressedRenderedBufferImage)(
+    IceTInt *rendered_viewport,
+    IceTInt *target_viewport,
+    IceTSizeType tile_width,
+    IceTSizeType tile_height);
 
 ICET_EXPORT void icetCompressImage(const IceTImage image,
                                    IceTSparseImage compressed_image);
@@ -157,6 +166,13 @@ ICET_EXPORT void icetCompressSubImage(const IceTImage image,
                                       IceTSizeType offset,
                                       IceTSizeType pixels,
                                       IceTSparseImage compressed_image);
+
+ICET_EXPORT void icetCompressImageRegion(const IceTImage source_image,
+                                         IceTInt *source_viewport,
+                                         IceTInt *target_viewport,
+                                         IceTSizeType width,
+                                         IceTSizeType height,
+                                         IceTSparseImage compressed_image);
 
 ICET_EXPORT void icetDecompressImage(const IceTSparseImage compressed_image,
                                      IceTImage image);

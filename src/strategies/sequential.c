@@ -84,11 +84,8 @@ IceTImage icetSequentialCompose(void)
 	}
 
 
-        rendered_image = icetGetStateBufferSparseImage(SEQUENTIAL_IMAGE_BUFFER,
-                                                       tile_width, tile_height);
-
-        icetGetCompressedTileImage(i, rendered_image);
-	icetSingleImageCompose(compose_group,
+        rendered_image = icetGetCompressedTileImage(i);
+        icetSingleImageCompose(compose_group,
                                num_proc,
                                image_dest,
                                rendered_image,

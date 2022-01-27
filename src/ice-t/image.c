@@ -193,6 +193,27 @@ static void icetSparseImageSplitChoosePartitions(
                                            IceTSizeType first_offset,
                                            IceTSizeType *offsets);
 
+/* This function is used to pull a properly centered image from a rendered
+   buffer. This function is used by icetGetTileImage to get the final image for
+   a tile. When a tile is rendered, it might not be centered in the expected
+   location due to, for example, a floating viewport. It might also need part
+   of its output cleared out. */
+static void getRenderedBufferImage(IceTImage rendered_image,
+                                   IceTImage target_image,
+                                   IceTInt *rendered_viewport,
+                                   IceTInt *target_viewport);
+
+/* This function is used to pull a sparse image from a rendered buffer. This
+   function is used by icetGetCompressedTileImage to get the final image for a
+   tile. When a tile is rendered, it might not be centered in the expected
+   location due to, for example, a floating viewport. */
+static IceTSparseImage getCompressedRenderedBufferImage(
+        IceTImage rendered_image,
+        IceTInt *rendered_viewport,
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height);
+
 /* This function is used to get the image for a tile. It will either render
    the tile on demand (with renderTile) or get the image from a pre-rendered
    image (with prerenderedTile). The screen_viewport is set to the region of
@@ -2206,72 +2227,104 @@ void icetGetTileImage(IceTInt tile, IceTImage image)
     rendered_image =
             generateTile(tile, screen_viewport, target_viewport, image);
 
+    getRenderedBufferImage(
+        rendered_image, image, screen_viewport, target_viewport);
+}
+
+static void getRenderedBufferImage(IceTImage rendered_image,
+                                   IceTImage target_image,
+                                   IceTInt *rendered_viewport,
+                                   IceTInt *target_viewport)
+{
+    if (*icetUnsafeStateGetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER))
+    {
+        IceTVoid* getImagePointer;
+        IceTGetRenderedBufferImage getImage;
+
+        icetGetPointerv(ICET_GET_RENDERED_BUFFER_IMAGE, &getImagePointer);
+        getImage = (IceTGetRenderedBufferImage)getImagePointer;
+        (*getImage)(target_image, rendered_viewport, target_viewport);
+        return;
+    }
+
     icetTimingBufferReadBegin();
 
-    if (icetImageEqual(rendered_image, image)) {
+    if (icetImageEqual(rendered_image, target_image)) {
       /* Check to make sure the screen and target viewports are also equal. */
-        if (    (screen_viewport[0] != target_viewport[0])
-             || (screen_viewport[1] != target_viewport[1])
-             || (screen_viewport[2] != target_viewport[2])
-             || (screen_viewport[3] != target_viewport[3]) ) {
+        if (    (rendered_viewport[0] != target_viewport[0])
+             || (rendered_viewport[1] != target_viewport[1])
+             || (rendered_viewport[2] != target_viewport[2])
+             || (rendered_viewport[3] != target_viewport[3]) ) {
             icetRaiseError(ICET_SANITY_CHECK_FAIL,
                            "Inconsistent values returned from generateTile.");
         }
     } else {
       /* Copy the appropriate part of the image to the output buffer. */
-        icetImageCopyRegion(rendered_image, screen_viewport,
-                            image, target_viewport);
+        icetImageCopyRegion(rendered_image, rendered_viewport,
+                            target_image, target_viewport);
     }
 
-    icetImageClearAroundRegion(image, target_viewport);
+    icetImageClearAroundRegion(target_image, target_viewport);
 
     icetTimingBufferReadEnd();
 }
 
-void icetGetCompressedTileImage(IceTInt tile, IceTSparseImage compressed_image)
+IceTSparseImage icetGetCompressedTileImage(IceTInt tile)
 {
     IceTInt screen_viewport[4], target_viewport[4];
     IceTImage raw_image;
     const IceTInt *viewports;
     IceTSizeType width, height;
-    IceTSizeType space_left, space_right, space_bottom, space_top;
 
     viewports = icetUnsafeStateGetInteger(ICET_TILE_VIEWPORTS);
     width = viewports[4*tile+2];
     height = viewports[4*tile+3];
-    icetSparseImageSetDimensions(compressed_image, width, height);
 
     raw_image = generateTile(tile, screen_viewport, target_viewport,
                              icetImageNull());
 
     if ((target_viewport[2] < 1) || (target_viewport[3] < 1)) {
         /* Tile empty.  Just clear result. */
-        icetClearSparseImage(compressed_image);
-        return;
+        IceTSparseImage empty = icetGetStateBufferSparseImage(
+                    ICET_SPARSE_TILE_BUFFER, width, height);
+        icetClearSparseImage(empty);
+        return empty;
     }
 
-    space_left = target_viewport[0];
-    space_right = width - target_viewport[2] - space_left;
-    space_bottom = target_viewport[1];
-    space_top = height - target_viewport[3] - space_bottom;
+    return getCompressedRenderedBufferImage(
+        raw_image, screen_viewport, target_viewport, width, height);
+}
 
-    icetSparseImageSetDimensions(compressed_image, width, height);
+static IceTSparseImage getCompressedRenderedBufferImage(
+        IceTImage rendered_image,
+        IceTInt *rendered_viewport,
+        IceTInt *target_viewport,
+        IceTSizeType tile_width,
+        IceTSizeType tile_height)
+{
+    IceTSparseImage sparseImage;
 
-#define INPUT_IMAGE             raw_image
-#define OUTPUT_SPARSE_IMAGE     compressed_image
-#define PADDING
-#define SPACE_BOTTOM            space_bottom
-#define SPACE_TOP               space_top
-#define SPACE_LEFT              space_left
-#define SPACE_RIGHT             space_right
-#define FULL_WIDTH              width
-#define FULL_HEIGHT             height
-#define REGION
-#define REGION_OFFSET_X         screen_viewport[0]
-#define REGION_OFFSET_Y         screen_viewport[1]
-#define REGION_WIDTH            screen_viewport[2]
-#define REGION_HEIGHT           screen_viewport[3]
-#include "compress_func_body.h"
+    if (*icetUnsafeStateGetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER))
+    {
+        IceTVoid* getImagePointer;
+        IceTGetCompressedRenderedBufferImage getImage;
+
+        icetGetPointerv(
+            ICET_GET_COMPRESSED_RENDERED_BUFFER_IMAGE, &getImagePointer);
+        getImage = (IceTGetCompressedRenderedBufferImage)getImagePointer;
+        return (*getImage)(
+            rendered_viewport, target_viewport, tile_width, tile_height);
+    }
+
+    sparseImage = icetGetStateBufferSparseImage(
+                ICET_SPARSE_TILE_BUFFER, tile_width, tile_height);
+    icetCompressImageRegion(rendered_image,
+                            rendered_viewport,
+                            target_viewport,
+                            tile_width,
+                            tile_height,
+                            sparseImage);
+    return sparseImage;
 }
 
 void icetCompressImage(const IceTImage image,
@@ -2301,6 +2354,37 @@ void icetCompressSubImage(const IceTImage image,
 #define OUTPUT_SPARSE_IMAGE     compressed_image
 #define OFFSET                  offset
 #define PIXEL_COUNT             pixels
+#include "compress_func_body.h"
+}
+
+void icetCompressImageRegion(const IceTImage source_image,
+                             IceTInt *source_viewport,
+                             IceTInt *target_viewport,
+                             IceTSizeType width,
+                             IceTSizeType height,
+                             IceTSparseImage compressed_image)
+{
+    IceTSizeType space_left, space_right, space_bottom, space_top;
+
+    space_left = target_viewport[0];
+    space_right = width - target_viewport[2] - space_left;
+    space_bottom = target_viewport[1];
+    space_top = height - target_viewport[3] - space_bottom;
+
+#define INPUT_IMAGE             source_image
+#define OUTPUT_SPARSE_IMAGE     compressed_image
+#define PADDING
+#define SPACE_BOTTOM            space_bottom
+#define SPACE_TOP               space_top
+#define SPACE_LEFT              space_left
+#define SPACE_RIGHT             space_right
+#define FULL_WIDTH              width
+#define FULL_HEIGHT             height
+#define REGION
+#define REGION_OFFSET_X         source_viewport[0]
+#define REGION_OFFSET_Y         source_viewport[1]
+#define REGION_WIDTH            source_viewport[2]
+#define REGION_HEIGHT           source_viewport[3]
 #include "compress_func_body.h"
 }
 
@@ -2925,6 +3009,10 @@ static IceTImage prerenderedTile(int tile,
 
 static IceTImage getRenderBuffer(void)
 {
+    if (*icetUnsafeStateGetBoolean(ICET_RENDER_LAYER_HOLDS_BUFFER)) {
+        return icetImageNull();
+    }
+
     /* Check to see if we are in the same frame as the last time we returned
        this buffer.  In that case, just restore the buffer because it still has
        the image we need. */

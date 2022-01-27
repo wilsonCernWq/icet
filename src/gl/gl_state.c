@@ -12,15 +12,26 @@
 #include <IceTDevDiagnostics.h>
 #include <IceTDevState.h>
 
+#include <string.h>
+
 static void gl_destroy(void);
+
+static const char gl_identifier[] = "OGL";
 
 void icetGLInitialize(void)
 {
     if (icetGLIsInitialized()) {
         icetRaiseWarning(ICET_INVALID_OPERATION,
                          "icetGLInitialize called multiple times.");
+    } else {
+        if (icetStateGetType(ICET_RENDER_LAYER_ID) != ICET_NULL) {
+            icetRaiseError(ICET_INVALID_OPERATION,
+                           "Attempted to initialize two different rendering "
+                           "layers.");
+        }
     }
 
+    icetStateSetPointer(ICET_RENDER_LAYER_ID, gl_identifier);
     icetStateSetBoolean(ICET_GL_INITIALIZED, ICET_TRUE);
 
     icetGLSetReadBuffer(GL_BACK);
@@ -38,6 +49,16 @@ void icetGLInitialize(void)
 
 IceTBoolean icetGLIsInitialized(void)
 {
+    if (icetStateGetType(ICET_RENDER_LAYER_ID) != ICET_NULL) {
+        IceTVoid* render_layer_id;
+        icetGetPointerv(ICET_RENDER_LAYER_ID, &render_layer_id);
+        if (strcmp(gl_identifier, (const char*)render_layer_id) != 0) {
+            return ICET_FALSE;
+        }
+    } else {
+        return ICET_FALSE;
+    }
+
     if (icetStateGetType(ICET_GL_INITIALIZED) != ICET_NULL) {
         IceTBoolean initialized;
         icetGetBooleanv(ICET_GL_INITIALIZED, &initialized);

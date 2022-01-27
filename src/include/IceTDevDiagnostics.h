@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 ICET_EXPORT void icetRaiseDiagnostic(IceTEnum type,
-				     IceTBitField level,
+                                     IceTBitField level,
                                      const char *file,
                                      int line,
                                      const char *format,
